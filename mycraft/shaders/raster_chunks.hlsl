@@ -7,7 +7,7 @@ struct VS_OUT
     float4 sun : VS_Sun;
 };
 
-static const float PI = 3.1415926535897932384626433832795f;
+static const float PI = radians(180);
 static const float2 DEFINED_TEXTURES[4] = {
     { 0.0f, 1.0f },
     { 0.0f, 0.0f },

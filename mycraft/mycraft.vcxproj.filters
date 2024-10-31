@@ -81,4 +81,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\draw_hit_block.hlsl" />
+    <None Include="shaders\draw_sky.hlsl" />
+    <None Include="shaders\draw_ui.hlsl" />
+    <None Include="shaders\raster_chunks.hlsl" />
+    <None Include="shaders\raster_shadows.hlsl" />
+    <None Include="shaders\tracing_world.hlsl" />
+  </ItemGroup>
 </Project>

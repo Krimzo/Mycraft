@@ -71,7 +71,7 @@ void Game::handle_mouse_input()
 {
 	auto& window = world.system.window;
 
-	player.inventory.selected_slot = abs(Inventory::HORIZONTAL_COUNT + player.inventory.selected_slot + window.mouse.scroll()) % Inventory::HORIZONTAL_COUNT;
+	player.inventory.selected_slot = abs(Inventory::HORIZONTAL_COUNT + player.inventory.selected_slot - window.mouse.scroll()) % Inventory::HORIZONTAL_COUNT;
 	
 	if (window.is_focused()) {
 		int2 frame_center = window.frame_center();

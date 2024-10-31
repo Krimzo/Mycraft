@@ -107,6 +107,26 @@
     <ClInclude Include="source\global\index.h" />
     <ClInclude Include="source\world\world.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\draw_hit_block.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shaders\draw_sky.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shaders\draw_ui.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shaders\raster_chunks.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shaders\raster_shadows.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shaders\tracing_world.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
