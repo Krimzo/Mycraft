@@ -3,7 +3,7 @@
 
 int main()
 {
-	Mycraft mycraft{};
-	while (mycraft.update());
-	return 0;
+    Mycraft mycraft{};
+    while ( mycraft.update() );
+    return 0;
 }

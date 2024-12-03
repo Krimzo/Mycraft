@@ -6,25 +6,25 @@
 
 struct UI
 {
-	Renderer& renderer;
+    Renderer const& renderer;
 
-	UI(Renderer& renderer);
+    UI( Renderer const& renderer );
 
-	void update();
-	void render();
+    void update();
+    void render();
 
 private:
-	kl::Shaders m_shaders;
-	UIProduct m_product;
-	dx::Buffer m_triangle_mesh;
-	dx::Buffer m_line_mesh;
-	dx::Buffer m_point_mesh;
+    kl::Shaders m_shaders;
+    UIProduct m_product;
+    dx::Buffer m_triangle_mesh;
+    dx::Buffer m_line_mesh;
+    dx::Buffer m_point_mesh;
 
-	dx::Buffer create_mesh(const UIPoint* data, UINT count) const;
+    dx::Buffer create_mesh( UIPoint* data, UINT count ) const;
 
-	void reload_shapes();
-	void reload_meshes();
+    void reload_shapes();
+    void reload_meshes();
 
-	void make_crosshair();
-	void make_toolbar();
+    void make_crosshair();
+    void make_toolbar();
 };

@@ -9,14 +9,14 @@
 
 struct Mycraft
 {
-	System system{ "Mycraft" };
-	World world{ system, 12 };
-	Game game{ world };
-	Renderer renderer{ game };
-	UI ui{ renderer };
+    System system{ "Mycraft" };
+    World world{ system, 12 };
+    Game game{ world };
+    Renderer renderer{ game };
+    UI ui{ renderer };
 
-	Mycraft();
-	~Mycraft();
+    Mycraft();
+    ~Mycraft();
 
-	bool update();
+    bool update();
 };
