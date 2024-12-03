@@ -41,7 +41,7 @@ static constexpr Triangle convert_triangle( triangle const& triangle )
     return result;
 }
 
-static std::vector<Quad> BLOCK_QUADS = []() -> std::vector<Quad>
+static const std::vector<Quad> BLOCK_QUADS = []() -> std::vector<Quad>
 {
     std::vector triangles = kl::GPU::generate_cube_mesh( 1.0f );
     for ( auto& triangle : triangles )
@@ -61,7 +61,7 @@ static std::vector<Quad> BLOCK_QUADS = []() -> std::vector<Quad>
     return quads;
 }();
 
-static std::vector<Quad> PETTLE_QUADS = []() -> std::vector<Quad>
+static const std::vector<Quad> PETTLE_QUADS = []() -> std::vector<Quad>
 {
     float near_offset = (sqrt( 2.0f ) - 1.0f) / (2.0f * sqrt( 2.0f ));
     float far_offset = 1.0f - near_offset;

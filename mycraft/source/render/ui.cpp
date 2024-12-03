@@ -73,7 +73,7 @@ void UI::reload_meshes()
 void UI::make_crosshair()
 {
     static constexpr float size = 0.02f;
-    static rgb color{ 255, 255, 255, 190 };
+    static const rgb color{ 255, 255, 255, 190 };
     m_product.lines.push_back( {
         { flt2{ 0.0f, -size }, color },
         { flt2{ 0.0f, size }, color },
