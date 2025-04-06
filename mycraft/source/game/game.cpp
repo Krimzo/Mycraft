@@ -76,7 +76,7 @@ void Game::handle_mouse_input()
 
     player.inventory.selected_slot = abs( Inventory::HORIZONTAL_COUNT + player.inventory.selected_slot - window.mouse.scroll() ) % Inventory::HORIZONTAL_COUNT;
 
-    if ( window.is_focused() )
+    if ( window.focused() )
     {
         int2 frame_center = window.frame_center();
         player.camera.rotate( window.mouse.position(), frame_center );
@@ -143,7 +143,7 @@ void Game::handle_keyboard_input()
     }
     if ( window.keyboard.f11.pressed() )
     {
-        bool new_state = !window.in_fullscreen();
+        bool new_state = !window.fullscreened();
         window.set_fullscreen( new_state );
         gpu.set_fullscreen( new_state );
     }

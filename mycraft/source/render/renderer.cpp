@@ -77,15 +77,11 @@ Renderer::Renderer( Game& game )
 
     window.on_resize.emplace_back( [this]( int2 size )
     {
-        if ( size.x > 0 && size.y > 0 )
-        {
-            this->game.world.system.gpu.resize_internal( size );
-            this->game.world.system.gpu.set_viewport_size( size );
-            this->game.player.camera.update_aspect_ratio( size );
-        }
+        this->game.world.system.gpu.resize_internal( size );
+        this->game.world.system.gpu.set_viewport_size( size );
+        this->game.player.camera.update_aspect_ratio( size );
     } );
     window.set_fullscreen( true );
-    gpu.set_fullscreen( true );
 }
 
 void Renderer::render()

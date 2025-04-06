@@ -3,7 +3,7 @@
 
 System::System( std::string_view const& title )
     : window( "Mycraft" )
-    , gpu( window )
+    , gpu( window.ptr() )
 {}
 
 bool System::update()
