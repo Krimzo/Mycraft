@@ -14,9 +14,6 @@ static const float2 DEFINED_TEXTURES[4] =
 };
 
 float4x4 VP;
-float3 CAMERA_ORIGIN;
-float ELAPSED_TIME;
-float RENDER_DISTANCE;
 
 Texture2D ATLAS_TEXTURE : register(t0);
 

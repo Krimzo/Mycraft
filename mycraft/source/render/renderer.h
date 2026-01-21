@@ -14,7 +14,8 @@ struct Renderer
 
     dx::DepthState enabled_depth;
     dx::DepthState disabled_depth;
-    dx::DepthState portal_stencil_depth;
+    dx::DepthState write_depth_stencil;
+    dx::DepthState compare_stencil;
 
     dx::SamplerState shadow_sampler;
     dx::SamplerState atlas_sampler;
@@ -45,13 +46,13 @@ private:
     void render_raster();
     void render_tracing();
 
-    void draw_sky();
-    void draw_hit_block();
-    void draw_portals_stencil();
+    void draw_sky( kl::Camera const& camera );
+    void draw_hit_block( kl::Camera const& camera );
+    void draw_portals_stencil( kl::Camera const& camera );
 
-    void raster_shadows();
-    void raster_chunks();
-    void tracing_world();
+    void raster_shadows( kl::Camera const& camera );
+    void raster_chunks( kl::Camera const& camera, bool write_ds, UINT stencil_ref );
+    void tracing_world( kl::Camera const& camera );
 
-    mat4 inv_shadow_cam() const;
+    mat4 inv_shadow_cam( kl::Camera camera ) const;
 };
