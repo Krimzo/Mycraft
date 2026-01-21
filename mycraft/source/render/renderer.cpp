@@ -20,6 +20,23 @@ Renderer::Renderer( Game& game )
     enabled_depth = gpu.create_depth_state( true );
     disabled_depth = gpu.create_depth_state( false );
 
+    dx::DepthStateDescriptor portal_stencil_depth_descriptor{};
+    portal_stencil_depth_descriptor.DepthEnable = true;
+    portal_stencil_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    portal_stencil_depth_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
+    portal_stencil_depth_descriptor.StencilEnable = true;
+    portal_stencil_depth_descriptor.StencilReadMask = 0xFF;
+    portal_stencil_depth_descriptor.StencilWriteMask = 0xFF;
+    portal_stencil_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
+    portal_stencil_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    portal_stencil_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+    portal_stencil_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+    portal_stencil_depth_descriptor.BackFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
+    portal_stencil_depth_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    portal_stencil_depth_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+    portal_stencil_depth_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+    portal_stencil_depth = gpu.create_depth_state( &portal_stencil_depth_descriptor );
+
     dx::SamplerStateDescriptor shadow_sampler_descriptor{};
     shadow_sampler_descriptor.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
     shadow_sampler_descriptor.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -48,6 +65,7 @@ Renderer::Renderer( Game& game )
     raster_shadow_shaders = gpu.create_shaders( kl::read_file( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
     raster_chunk_shaders = gpu.create_shaders( kl::read_file( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
     tracing_world_shaders = gpu.create_shaders( kl::read_file( "shaders/tracing_world.hlsl" ) );
+    portal_stencil_shaders = gpu.create_shaders( kl::read_file( "shaders/portal_stencil.hlsl" ) );
 
     sky_mesh = gpu.create_cube_mesh( 1.0f );
     hit_block_mesh = gpu.create_vertex_buffer( {
@@ -71,16 +89,17 @@ Renderer::Renderer( Game& game )
         { { 0.0f, 0.0f, 1.0f } },
         } );
     tracing_mesh = gpu.create_screen_mesh();
+    portal_mesh = gpu.create_cube_mesh( { 1.0f } );
 
     atlas_texture = gpu.create_texture( kl::Image( "textures/blocks.png" ) );
     atlas_shader_view = gpu.create_shader_view( atlas_texture, nullptr );
 
     window.on_resize.emplace_back( [this]( int2 size )
-    {
-        this->game.world.system.gpu.resize_internal( size );
-        this->game.world.system.gpu.set_viewport_size( size );
-        this->game.player.camera.update_aspect_ratio( size );
-    } );
+        {
+            this->game.world.system.gpu.resize_internal( size, DXGI_FORMAT_D24_UNORM_S8_UINT );
+            this->game.world.system.gpu.set_viewport_size( size );
+            this->game.player.camera.update_aspect_ratio( size );
+        } );
     window.set_fullscreen( true );
 }
 
@@ -100,6 +119,7 @@ void Renderer::render_raster()
 {
     draw_sky();
     raster_shadows();
+    draw_portals_stencil();
     raster_chunks();
     draw_hit_block();
 }
@@ -118,7 +138,7 @@ void Renderer::draw_sky()
     gpu.bind_raster_state( no_cull_raster );
     gpu.bind_depth_state( disabled_depth );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         mat4 VP;
         flt3 SUN_DIRECTION;
@@ -146,7 +166,7 @@ void Renderer::draw_hit_block()
     gpu.bind_raster_state( cull_raster );
     gpu.bind_depth_state( enabled_depth );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         mat4 WVP;
     } cb = {};
@@ -158,6 +178,65 @@ void Renderer::draw_hit_block()
 
     gpu.bind_shaders( draw_hit_block_shaders );
     gpu.draw( hit_block_mesh, D3D_PRIMITIVE_TOPOLOGY_LINESTRIP );
+}
+
+void Renderer::draw_portals_stencil()
+{
+    auto& gpu = game.world.system.gpu;
+
+    gpu.bind_raster_state( cull_raster );
+    gpu.bind_depth_state( portal_stencil_depth );
+
+    struct alignas( 16 ) CB
+    {
+        mat4 WVP;
+    } cb = {};
+
+    int portal_index = 0;
+    gpu.bind_shaders( portal_stencil_shaders );
+    for ( auto& portal : game.portals )
+    {
+        gpu.bind_depth_state( portal_stencil_depth, portal_index++ );
+
+        cb.WVP = game.player.camera.matrix() * portal->matrix();
+        portal_stencil_shaders.upload( cb );
+
+        gpu.draw( portal_mesh );
+    }
+
+    // debug
+    if ( false && game.world.system.window.keyboard.f2 )
+    {
+        gpu.unbind_depth_state();
+        auto texture = gpu.back_depth_texture();
+        auto staging_texture = gpu.create_staging_texture( texture );
+        gpu.copy_resource( staging_texture, texture );
+
+        struct DepthStencilValue
+        {
+            int depth : 24;
+            int stencil : 8;
+        };
+
+        std::vector<DepthStencilValue> depth_stencil_values;
+        auto texture_size = gpu.texture_size( texture );
+        depth_stencil_values.resize( (size_t) texture_size.x * texture_size.y );
+        gpu.read_from_texture( depth_stencil_values.data(), staging_texture, texture_size, sizeof( DepthStencilValue ) );
+
+        kl::Image depth_stencil_frame;
+        depth_stencil_frame.resize( texture_size );
+        for ( int2 pos; pos.y < texture_size.y; ++pos.y )
+        {
+            for ( pos.x = 0; pos.x < texture_size.x; ++pos.x )
+            {
+                const int index = pos.to_index( depth_stencil_frame.width() );
+                auto& value = depth_stencil_values[index];
+                depth_stencil_frame[pos] = { (byte) value.stencil, (byte) value.stencil, (byte) value.stencil };
+            }
+        }
+        depth_stencil_frame.save_to_file( R"(C:\Users\ivan\Desktop\depth_frame.png)", kl::ImageType::PNG );
+        exit( 17 );
+    }
 }
 
 void Renderer::raster_shadows()
@@ -174,7 +253,7 @@ void Renderer::raster_shadows()
     gpu.bind_target_depth_views( {}, game.environment.sun.depth_view( 0 ) );
     gpu.clear_depth_view( game.environment.sun.depth_view( 0 ) );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         mat4 VP;
         flt3 CAMERA_ORIGIN;
@@ -200,9 +279,7 @@ void Renderer::raster_shadows()
     for ( int i = 0; i < game.world.chunk_count(); i++ )
     {
         if ( game.world.chunk_visible( sun_plane, i ) )
-        {
             gpu.draw( game.world.get_chunk( i ).buffer, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, sizeof( Vertex ) );
-        }
     }
 
     gpu.bind_internal_views();
@@ -222,7 +299,7 @@ void Renderer::raster_chunks()
     gpu.bind_sampler_state_for_pixel_shader( shadow_sampler, 0 );
     gpu.bind_sampler_state_for_pixel_shader( atlas_sampler, 1 );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         mat4 VP;
         mat4 SUN_VP;
@@ -250,9 +327,7 @@ void Renderer::raster_chunks()
     for ( int i = 0; i < game.world.chunk_count(); i++ )
     {
         if ( game.world.chunk_visible( camera_plane, i ) )
-        {
             gpu.draw( game.world.get_chunk( i ).buffer, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, sizeof( Vertex ) );
-        }
     }
 
     gpu.unbind_shader_view_for_pixel_shader( 1 );
@@ -271,7 +346,7 @@ void Renderer::tracing_world()
 
     gpu.bind_sampler_state_for_pixel_shader( atlas_sampler, 0 );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         mat4 INV_CAM;
         flt3 CAMERA_POSITION;

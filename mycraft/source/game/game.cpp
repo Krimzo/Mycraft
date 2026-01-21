@@ -3,7 +3,8 @@
 
 Environment::Environment( kl::GPU& gpu )
     : sun( gpu, 4096 )
-{}
+{
+}
 
 std::optional<Block> Inventory::selected_item() const
 {
@@ -18,6 +19,11 @@ flt3 Player::position() const
 void Player::set_position( flt3 const& position )
 {
     camera.position = position + flt3{ 0.0f, PLAYER_HEIGHT, 0.0f };
+}
+
+mat4 Portal::matrix() const
+{
+    return mat4::translation( position ) * mat4::rotation( rotation ) * mat4::scaling( scale );
 }
 
 Game::Game( World& world )
@@ -35,6 +41,20 @@ Game::Game( World& world )
         player.inventory.toolbar[counter] = value;
         counter += 1;
     }
+
+    std::shared_ptr<Portal> portal_a = std::make_shared<Portal>();
+    std::shared_ptr<Portal> portal_b = std::make_shared<Portal>();
+
+    portal_a->position = { 10.0f, 4.25f, 10.0f };
+    portal_a->rotation = { 0.0f, -45.0f, 0.0f };
+    portal_a->friend_portal = portal_b;
+
+    portal_b->position = { -10.0f, 4.25f, -10.0f };
+    portal_b->rotation = { 0.0f, 45.0f, 0.0f };
+    portal_b->friend_portal = portal_a;
+
+    portals.push_back( portal_a );
+    portals.push_back( portal_b );
 }
 
 void Game::update()
@@ -67,7 +87,7 @@ float Game::max_view_distance() const
     static constexpr flt3 single_chunk{ CHUNK_WIDTH, 0.0f, CHUNK_WIDTH };
     flt3 center_point = world.center_chunk_pos().to_flt3() + single_chunk;
     flt3 first_point = world.first_chunk_pos().to_flt3();
-    return (first_point - center_point).length();
+    return ( first_point - center_point ).length();
 }
 
 void Game::handle_mouse_input()
@@ -217,7 +237,7 @@ void Game::update_time()
     flt3 direction;
     direction.x = sin( time * 2.0f * kl::pi() / environment.day_duration );
     direction.y = cos( time * 2.0f * kl::pi() / environment.day_duration );
-    direction.z = -(1.0f / 2.5f) * sin( time * 2.0f * kl::pi() / environment.day_duration );
+    direction.z = -( 1.0f / 2.5f ) * sin( time * 2.0f * kl::pi() / environment.day_duration );
     environment.sun.set_direction( direction );
 }
 
@@ -255,11 +275,11 @@ void Game::update_creative_movement( float delta_t )
     {
         player.camera.move_left( delta_t );
     }
-    if ( window.keyboard.c )
+    if ( window.keyboard.q )
     {
         player.camera.move_down( delta_t );
     }
-    if ( window.keyboard.space )
+    if ( window.keyboard.e )
     {
         player.camera.move_up( delta_t );
     }

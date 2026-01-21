@@ -88,5 +88,6 @@
     <None Include="shaders\raster_chunks.hlsl" />
     <None Include="shaders\raster_shadows.hlsl" />
     <None Include="shaders\tracing_world.hlsl" />
+    <None Include="shaders\portal_stencil.hlsl" />
   </ItemGroup>
 </Project>

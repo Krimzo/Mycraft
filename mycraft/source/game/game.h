@@ -55,6 +55,16 @@ struct Player
     void set_position( flt3 const& position );
 };
 
+struct Portal
+{
+    flt3 position;
+    flt3 rotation;
+    static inline constexpr flt3 scale = { 1.5f, 2.5f, 0.1f };
+    std::weak_ptr<Portal> friend_portal;
+
+    mat4 matrix() const;
+};
+
 struct Game
 {
     static constexpr float TRANSITION_DURATION = 2.0f;
@@ -65,6 +75,7 @@ struct Game
     World& world;
     Environment environment;
     Player player;
+    std::vector<std::shared_ptr<Portal>> portals;
 
     std::optional<HitPayload> hit_block;
 

@@ -14,6 +14,7 @@ struct Renderer
 
     dx::DepthState enabled_depth;
     dx::DepthState disabled_depth;
+    dx::DepthState portal_stencil_depth;
 
     dx::SamplerState shadow_sampler;
     dx::SamplerState atlas_sampler;
@@ -26,10 +27,12 @@ struct Renderer
     kl::Shaders raster_shadow_shaders;
     kl::Shaders raster_chunk_shaders;
     kl::Shaders tracing_world_shaders;
+    kl::Shaders portal_stencil_shaders;
 
     dx::Buffer sky_mesh;
     dx::Buffer hit_block_mesh;
     dx::Buffer tracing_mesh;
+    dx::Buffer portal_mesh;
 
     dx::Texture atlas_texture;
     dx::ShaderView atlas_shader_view;
@@ -44,6 +47,7 @@ private:
 
     void draw_sky();
     void draw_hit_block();
+    void draw_portals_stencil();
 
     void raster_shadows();
     void raster_chunks();
