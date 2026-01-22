@@ -2,7 +2,7 @@ struct VS_OUT
 {
     float3 world : VS_World;
     float4 position : SV_Position;
-    float2 textur : VS_Texture;
+    float2 uv : VS_UV;
     float ambient : VS_Ambient;
     float4 sun : VS_Sun;
 };
@@ -66,7 +66,7 @@ VS_OUT v_shader(float3 position : KL_Position, uint textur : KL_Texture, uint am
     VS_OUT data;
     data.world = position;
     data.position = mul(float4(data.world, 1.0f), VP);
-    data.textur = atlas_uv(block, textur);
+    data.uv = atlas_uv(block, textur);
     data.ambient = ambient * (AMBIENT_FACTOR / 255.0f);
     
     data.sun = mul(float4(position, 1.0f), SUN_VP);
@@ -86,7 +86,7 @@ float4 p_shader(VS_OUT data) : SV_Target0
             discard;
     }
     
-    float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.textur);
+    float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.uv);
     if (color.a < 1.0f)
         discard;
     

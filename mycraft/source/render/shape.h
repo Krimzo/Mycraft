@@ -29,6 +29,8 @@ struct UIProduct
     std::vector<UIPoint> points;
     std::vector<UILine> lines;
     std::vector<UITriangle> triangles;
+
+    void clear();
 };
 
 struct UIRectangle

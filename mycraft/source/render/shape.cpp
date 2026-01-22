@@ -24,3 +24,10 @@ void UIRectangle::generate( UIProduct& product ) const
         { w_rb, color, t_rb, blend },
         } );
 }
+
+void UIProduct::clear()
+{
+    points.clear();
+    lines.clear();
+    triangles.clear();
+}

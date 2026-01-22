@@ -8,7 +8,7 @@ UI::UI( Renderer const& renderer )
     std::vector<dx::LayoutDescriptor> ui_input_layout = {
         { "KL_Position", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "KL_Texture", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "KL_UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Blend", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     m_shaders = gpu.create_shaders( kl::read_file( "shaders/draw_ui.hlsl" ), ui_input_layout );
@@ -31,7 +31,7 @@ void UI::render()
     gpu.bind_sampler_state_for_pixel_shader( renderer.atlas_sampler, 0 );
     gpu.bind_shader_view_for_pixel_shader( renderer.atlas_shader_view, 0 );
 
-    struct alignas(16) CB
+    struct alignas( 16 ) CB
     {
         float AR;
     } cb = {};
@@ -58,7 +58,7 @@ dx::Buffer UI::create_mesh( UIPoint* data, UINT count ) const
 
 void UI::reload_shapes()
 {
-    m_product = {};
+    m_product.clear();
     make_crosshair();
     make_toolbar();
 }
@@ -89,7 +89,7 @@ void UI::make_toolbar()
     static constexpr flt2 item_size = { 0.08f, 0.08f };
     static constexpr flt2 toolbar_padding = { 0.01f, 0.01f };
     static constexpr flt2 toolbar_size = {
-        toolbar_padding.x + Inventory::HORIZONTAL_COUNT * (item_size.x + toolbar_padding.x),
+        toolbar_padding.x + Inventory::HORIZONTAL_COUNT * ( item_size.x + toolbar_padding.x ),
         toolbar_padding.y + item_size.y + toolbar_padding.y,
     };
     static constexpr flt2 toolbar_position = { -toolbar_size.x * 0.5f, -0.95f };
@@ -101,7 +101,7 @@ void UI::make_toolbar()
 
     for ( int i = 0; i < Inventory::HORIZONTAL_COUNT; i++ )
     {
-        flt2 item_position = toolbar_position + toolbar_padding + flt2{ i * (item_size.x + toolbar_padding.x), 0.0f };
+        flt2 item_position = toolbar_position + toolbar_padding + flt2{ i * ( item_size.x + toolbar_padding.x ), 0.0f };
         if ( i == inventory.selected_slot )
         {
             static constexpr flt2 extension = toolbar_padding * 0.5f;
