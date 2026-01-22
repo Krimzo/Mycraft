@@ -45,11 +45,11 @@ Game::Game( World& world )
     std::shared_ptr<Portal> portal_a = std::make_shared<Portal>();
     std::shared_ptr<Portal> portal_b = std::make_shared<Portal>();
 
-    portal_a->position = { 10.0f, 4.25f, 10.0f };
+    portal_a->position = { 9.0f, 4.25f, 9.0f };
     portal_a->rotation = { 0.0f, -45.0f, 0.0f };
     portal_a->friend_portal = portal_b;
 
-    portal_b->position = { -10.0f, 4.25f, -10.0f };
+    portal_b->position = { -9.0f, 4.25f, -9.0f };
     portal_b->rotation = { 0.0f, 45.0f, 0.0f };
     portal_b->friend_portal = portal_a;
 

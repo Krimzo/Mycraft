@@ -35,10 +35,10 @@ Renderer::Renderer( Game& game )
     write_depth_stencil_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
     write_depth_stencil_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
     write_depth_stencil_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-    write_depth_stencil = gpu.create_depth_state( &write_depth_stencil_descriptor );
+    write_stencil = gpu.create_depth_state( &write_depth_stencil_descriptor );
 
     dx::DepthStateDescriptor compare_stencil_descriptor{};
-    compare_stencil_descriptor.DepthEnable = false;
+    compare_stencil_descriptor.DepthEnable = true;
     compare_stencil_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     compare_stencil_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
     compare_stencil_descriptor.StencilEnable = true;
@@ -141,17 +141,21 @@ void Renderer::render_raster()
 
     raster_shadows( main_camera );
     raster_chunks( main_camera, true, 0xFF );
+    draw_hit_block( main_camera );
+
+    auto& gpu = game.world.system.gpu;
+    gpu.context()->ClearDepthStencilView( gpu.back_depth_view().get(), D3D11_CLEAR_DEPTH, 1.0f, 0xFF );
 
     int portal_index = 0;
     for ( auto& portal : game.portals )
     {
+        const mat4 relative_matrix = portal->friend_portal.lock()->matrix() * kl::inverse( portal->matrix() );
         kl::Camera portal_camera = main_camera;
-        portal_camera.position = portal->friend_portal.lock()->position + ( main_camera.position - portal->position );
+        portal_camera.position = ( relative_matrix * flt4( main_camera.position, 1.0f ) ).xyz();
+        portal_camera.set_forward( ( relative_matrix * flt4( main_camera.forward(), 0.0f ) ).xyz() );
         raster_shadows( portal_camera );
         raster_chunks( portal_camera, false, portal_index++ );
     }
-
-    draw_hit_block( main_camera );
 
     // debug
     if ( game.world.system.window.keyboard.f2 )
@@ -262,7 +266,7 @@ void Renderer::draw_portals_stencil( kl::Camera const& camera )
     gpu.bind_shaders( portal_stencil_shaders );
     for ( auto& portal : game.portals )
     {
-        gpu.bind_depth_state( write_depth_stencil, portal_index++ );
+        gpu.bind_depth_state( write_stencil, portal_index++ );
 
         cb.WVP = camera.matrix() * portal->matrix();
         portal_stencil_shaders.upload( cb );
@@ -312,12 +316,12 @@ void Renderer::raster_shadows( kl::Camera const& camera )
     gpu.set_viewport_size( game.world.system.window.size() );
 }
 
-void Renderer::raster_chunks( kl::Camera const& camera, bool write_ds, UINT stencil_ref )
+void Renderer::raster_chunks( kl::Camera const& camera, bool should_write_stencil, UINT stencil_ref )
 {
     auto& gpu = game.world.system.gpu;
 
     gpu.bind_raster_state( game.world.system.wireframe ? wireframe_raster : cull_raster );
-    gpu.bind_depth_state( write_ds ? write_depth_stencil : compare_stencil, stencil_ref );
+    gpu.bind_depth_state( should_write_stencil ? write_stencil : compare_stencil, stencil_ref );
 
     gpu.bind_shader_view_for_pixel_shader( game.environment.sun.shader_view( 0 ), 0 );
     gpu.bind_shader_view_for_pixel_shader( atlas_shader_view, 1 );
