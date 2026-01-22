@@ -135,41 +135,19 @@ void Renderer::render()
 void Renderer::render_raster()
 {
     auto& main_camera = game.player.camera;
-
     draw_portals_stencil( main_camera );
     draw_sky( main_camera );
-
-    raster_shadows( main_camera );
-    raster_chunks( main_camera, nullptr, true, 0xFF );
+    draw_raster_shadows( main_camera );
+    draw_raster_chunks( main_camera, nullptr, true, 0xFF );
     draw_hit_block( main_camera );
-
-    auto& gpu = game.world.system.gpu;
-    gpu.context()->ClearDepthStencilView( gpu.back_depth_view().get(), D3D11_CLEAR_DEPTH, 1.0f, 0xFF );
-
-    int portal_index = 0;
-    for ( auto& portal : game.portals )
-    {
-        const flt3 friend_position = portal->friend_portal.lock()->position;
-        const mat4 friend_matrix = portal->friend_portal.lock()->matrix();
-        const mat4 relative_matrix = friend_matrix * kl::inverse( portal->matrix() );
-        kl::Camera portal_camera = main_camera;
-        portal_camera.position = ( relative_matrix * flt4( main_camera.position, 1.0f ) ).xyz();
-        portal_camera.set_forward( ( relative_matrix * flt4( main_camera.forward(), 0.0f ) ).xyz() );
-        raster_shadows( portal_camera );
-        plane clipping_plane;
-        clipping_plane.position = friend_position;
-        clipping_plane.set_normal( ( friend_matrix * flt4( 0.0f, 0.0f, 1.0f, 0.0f ) ).xyz() );
-        if ( clipping_plane.in_front( portal_camera.position ) )
-            clipping_plane.set_normal( -clipping_plane.normal() );
-        raster_chunks( portal_camera, &clipping_plane, false, portal_index++ );
-    }
+    draw_portals( main_camera );
 }
 
 void Renderer::render_tracing()
 {
     auto& main_camera = game.player.camera;
     draw_sky( main_camera );
-    tracing_world( main_camera );
+    draw_tracing_world( main_camera );
     draw_hit_block( main_camera );
 }
 
@@ -246,7 +224,34 @@ void Renderer::draw_portals_stencil( kl::Camera const& camera )
     }
 }
 
-void Renderer::raster_shadows( kl::Camera const& camera )
+void Renderer::draw_portals( kl::Camera const& camera )
+{
+    auto& gpu = game.world.system.gpu;
+
+    gpu.context()->ClearDepthStencilView( gpu.back_depth_view().get(), D3D11_CLEAR_DEPTH, 1.0f, 0xFF );
+
+    int portal_index = 0;
+    for ( auto& portal : game.portals )
+    {
+        const flt3 friend_position = portal->friend_portal.lock()->position;
+        const mat4 friend_matrix = portal->friend_portal.lock()->matrix();
+        const mat4 relative_matrix = friend_matrix * kl::inverse( portal->matrix() );
+
+        kl::Camera portal_camera = camera;
+        portal_camera.position = ( relative_matrix * flt4( camera.position, 1.0f ) ).xyz();
+        portal_camera.set_forward( ( relative_matrix * flt4( camera.forward(), 0.0f ) ).xyz() );
+        draw_raster_shadows( portal_camera );
+
+        plane clipping_plane;
+        clipping_plane.position = friend_position;
+        clipping_plane.set_normal( ( friend_matrix * flt4( 0.0f, 0.0f, 1.0f, 0.0f ) ).xyz() );
+        if ( clipping_plane.in_front( portal_camera.position ) )
+            clipping_plane.set_normal( -clipping_plane.normal() );
+        draw_raster_chunks( portal_camera, &clipping_plane, false, portal_index++ );
+    }
+}
+
+void Renderer::draw_raster_shadows( kl::Camera const& camera )
 {
     auto& gpu = game.world.system.gpu;
 
@@ -265,7 +270,7 @@ void Renderer::raster_shadows( kl::Camera const& camera )
         mat4 VP;
     } cb = {};
 
-    cb.VP = game.environment.sun.matrix( inv_shadow_cam( camera ) );
+    cb.VP = game.environment.sun.matrix( get_inv_shadow_cam( camera ) );
     raster_shadow_shaders.upload( cb );
 
     mat4 inv_sun_mat = kl::inverse( cb.VP );
@@ -287,7 +292,7 @@ void Renderer::raster_shadows( kl::Camera const& camera )
     gpu.set_viewport_size( game.world.system.window.size() );
 }
 
-void Renderer::raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref )
+void Renderer::draw_raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref )
 {
     auto& gpu = game.world.system.gpu;
 
@@ -315,7 +320,7 @@ void Renderer::raster_chunks( kl::Camera const& camera, plane const* clipping_pl
     } cb = {};
 
     cb.VP = camera.matrix();
-    cb.SUN_VP = game.environment.sun.matrix( inv_shadow_cam( camera ) );
+    cb.SUN_VP = game.environment.sun.matrix( get_inv_shadow_cam( camera ) );
     cb.CAMERA_POSITION = camera.position;
     cb.ELAPSED_TIME = game.world.system.timer.elapsed();
     cb.SUN_DIRECTION = game.environment.sun.direction();
@@ -341,7 +346,7 @@ void Renderer::raster_chunks( kl::Camera const& camera, plane const* clipping_pl
     gpu.unbind_shader_view_for_pixel_shader( 0 );
 }
 
-void Renderer::tracing_world( kl::Camera const& camera )
+void Renderer::draw_tracing_world( kl::Camera const& camera )
 {
     auto& gpu = game.world.system.gpu;
 
@@ -374,7 +379,7 @@ void Renderer::tracing_world( kl::Camera const& camera )
     gpu.unbind_shader_view_for_pixel_shader( 0 );
 }
 
-mat4 Renderer::inv_shadow_cam( kl::Camera camera ) const
+mat4 Renderer::get_inv_shadow_cam( kl::Camera camera ) const
 {
     camera.near_plane = 0.01f;
     camera.far_plane = flt2( CHUNK_WIDTH ).length();

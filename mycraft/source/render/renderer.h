@@ -49,10 +49,10 @@ private:
     void draw_sky( kl::Camera const& camera );
     void draw_hit_block( kl::Camera const& camera );
     void draw_portals_stencil( kl::Camera const& camera );
+    void draw_portals( kl::Camera const& camera );
+    void draw_raster_shadows( kl::Camera const& camera );
+    void draw_raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref );
+    void draw_tracing_world( kl::Camera const& camera );
 
-    void raster_shadows( kl::Camera const& camera );
-    void raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref );
-    void tracing_world( kl::Camera const& camera );
-
-    mat4 inv_shadow_cam( kl::Camera camera ) const;
+    mat4 get_inv_shadow_cam( kl::Camera camera ) const;
 };
