@@ -13,7 +13,6 @@ struct UIMesh
     UIMesh( kl::GPU& gpu );
 
     void upload( UIPoint const* data, UINT count );
-    void draw( D3D_PRIMITIVE_TOPOLOGY topology ) const;
 };
 
 struct UI
@@ -27,9 +26,7 @@ struct UI
 private:
     kl::Shaders m_shaders;
     UIProduct m_product;
-    UIMesh m_triangle_mesh;
-    UIMesh m_line_mesh;
-    UIMesh m_point_mesh;
+    UIMesh m_mesh;
 
     void reload();
     void draw();

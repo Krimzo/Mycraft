@@ -32,28 +32,15 @@ void UIMesh::upload( UIPoint const* data, UINT count )
     buffer = gpu.create_buffer( &descriptor, &subresource_data );
 
     if constexpr ( kl::IS_DEBUG )
-        kl::print( "Created UI buffer: ", count, " UIPoint-s (", count * sizeof( UIPoint ), " bytes)" );
-}
-
-void UIMesh::draw( D3D_PRIMITIVE_TOPOLOGY topology ) const
-{
-    if ( !buffer )
-        return;
-
-    gpu.set_draw_type( topology );
-    gpu.bind_vertex_buffer( buffer, 0, 0, sizeof( UIPoint ) );
-    gpu.draw( point_count, 0 );
+        kl::print( "Created UIMesh buffer: ", count, " UIPoint-s (", count * sizeof( UIPoint ), " bytes)" );
 }
 
 UI::UI( Renderer const& renderer )
     : renderer( renderer )
-    , m_triangle_mesh( renderer.game.world.system.gpu )
-    , m_line_mesh( renderer.game.world.system.gpu )
-    , m_point_mesh( renderer.game.world.system.gpu )
+    , m_mesh( renderer.game.world.system.gpu )
 {
     auto& gpu = renderer.game.world.system.gpu;
     std::vector<dx::LayoutDescriptor> ui_input_layout = {
-        { "KL_Layer", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Position", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -83,14 +70,12 @@ void UI::draw()
 {
     auto& gpu = renderer.game.world.system.gpu;
 
-    m_triangle_mesh.upload( (UIPoint*) m_product.triangles.data(), (UINT) m_product.triangles.size() * 3 );
-    m_line_mesh.upload( (UIPoint*) m_product.lines.data(), (UINT) m_product.lines.size() * 2 );
-    m_point_mesh.upload( (UIPoint*) m_product.points.data(), (UINT) m_product.points.size() * 1 );
-
-    gpu.clear_internal_depth();
+    m_mesh.upload( m_product.point_data(), m_product.point_count() );
+    if ( !m_mesh.buffer || m_mesh.point_count == 0 )
+        return;
 
     gpu.bind_raster_state( renderer.ui_raster );
-    gpu.bind_depth_state( renderer.enabled_depth );
+    gpu.bind_depth_state( renderer.disabled_depth );
     gpu.bind_blend_state( renderer.enabled_blend );
 
     gpu.bind_sampler_state_for_pixel_shader( renderer.atlas_sampler, 0 );
@@ -105,9 +90,12 @@ void UI::draw()
     m_shaders.upload( cb );
 
     gpu.bind_shaders( m_shaders );
-    m_triangle_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-    m_line_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_LINELIST );
-    m_point_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_POINTLIST );
+    gpu.bind_vertex_buffer( m_mesh.buffer, 0, 0, sizeof( UIPoint ) );
+    for ( auto& info : m_product.render_info() )
+    {
+        gpu.set_draw_type( info.topology );
+        gpu.draw( info.count, info.offset );
+    }
     gpu.draw_text();
 
     gpu.unbind_blend_state();
@@ -133,13 +121,13 @@ void UI::reload_crosshair()
 {
     static constexpr float size = 0.02f;
     static const rgb color{ 255, 255, 255, 190 };
-    m_product.lines.push_back( {
-        { 1, { 0.0f, -size }, color },
-        { 1, { 0.0f, size }, color },
+    m_product.append_line( {
+        { { 0.0f, -size }, color },
+        { { 0.0f, size }, color },
         } );
-    m_product.lines.push_back( {
-        { 1, { -size, 0.0f }, color },
-        { 1, { size, 0.0f }, color },
+    m_product.append_line( {
+        { { -size, 0.0f }, color },
+        { { size, 0.0f }, color },
         } );
 }
 
@@ -155,7 +143,7 @@ void UI::reload_toolbar()
 
     auto& inventory = renderer.game.player.inventory;
 
-    UIRectangle toolbar_background{ 3, toolbar_position, toolbar_size, rgb( 0, 0, 0, 190 ) };
+    UIRectangle toolbar_background{ toolbar_position, toolbar_size, rgb( 0, 0, 0, 190 ) };
     toolbar_background.produce( m_product );
 
     for ( int i = 0; i < Inventory::HORIZONTAL_COUNT; i++ )
@@ -164,11 +152,11 @@ void UI::reload_toolbar()
         if ( i == inventory.selected_slot )
         {
             static constexpr flt2 extension = toolbar_padding * 0.5f;
-            UIRectangle selected{ 2, item_position - extension, item_size + extension * 2.0f, rgb( 220, 220, 220, 190 ) };
+            UIRectangle selected{ item_position - extension, item_size + extension * 2.0f, rgb( 220, 220, 220, 190 ) };
             selected.produce( m_product );
         }
         const Block block = inventory.toolbar[i].value_or( Block::AIR );
-        UIRectangle item{ 1, item_position, item_size, {},
+        UIRectangle item{ item_position, item_size, {},
             atlas_uv( block, flt2{ 0.0f } ), atlas_uv( block, flt2{ 1.0f } ), 1.0f };
         item.produce( m_product );
     }
@@ -177,7 +165,6 @@ void UI::reload_toolbar()
 void UI::reload_main_menu()
 {
     UIRectangle main_menu_background;
-    main_menu_background.layer = 0;
     main_menu_background.center_align( { 0.0f, 0.0f }, { 1.0f, 1.25f } );
     main_menu_background.color = { 0, 0, 0, 220 };
     main_menu_background.produce( m_product );

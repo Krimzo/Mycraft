@@ -12,12 +12,10 @@ Texture2D ATLAS_TEXTURE : register(t0);
 
 SamplerState ATLAS_SAMPLER : register(s0);
 
-VS_OUT v_shader(uint layer : KL_Layer, float3 position : KL_Position, float4 color : KL_Color, float2 uv : KL_UV, float blend : KL_Blend)
+VS_OUT v_shader(float2 position : KL_Position, float4 color : KL_Color, float2 uv : KL_UV, float blend : KL_Blend)
 {
     VS_OUT data;
-    data.position = float4(position.x / AR, position.y,
-        layer / 256.0f, // divide by 256 and not 255 because 1.0 is not visible
-        1.0f);
+    data.position = float4(position.x / AR, position.y, 0.0f, 1.0f);
     data.color = color;
     data.uv = uv;
     data.blend = blend;

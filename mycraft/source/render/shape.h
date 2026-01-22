@@ -5,7 +5,6 @@
 
 struct UIPoint
 {
-    byte layer = 0;
     flt2 position;
     flt4 color;
     flt2 texture;
@@ -25,18 +24,35 @@ struct UITriangle
     UIPoint c;
 };
 
+struct UIRenderInfo
+{
+    D3D_PRIMITIVE_TOPOLOGY topology;
+    UINT offset = 0;
+    UINT count = 0;
+};
+
 struct UIProduct
 {
-    std::vector<UIPoint> points;
-    std::vector<UILine> lines;
-    std::vector<UITriangle> triangles;
+    void append_point( UIPoint const& point );
+    void append_line( UILine const& line );
+    void append_triangle( UITriangle const& triangle );
 
     void clear();
+
+    UIPoint const* point_data() const;
+    UINT point_count() const;
+
+    std::vector<UIRenderInfo> const& render_info() const;
+
+private:
+    std::vector<UIPoint> m_points;
+    std::vector<UIRenderInfo> m_render_info;
+
+    UIRenderInfo& get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY topology );
 };
 
 struct UIRectangle
 {
-    byte layer = 0;
     flt2 position;
     flt2 size;
     rgb color;
