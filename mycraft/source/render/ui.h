@@ -38,4 +38,6 @@ private:
     void reload_crosshair();
     void reload_toolbar();
     void reload_main_menu();
+
+    void draw_text();
 };

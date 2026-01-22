@@ -1,6 +1,26 @@
 #include "render/shape.h"
 
 
+UITextFormatHandler::UITextFormatHandler( kl::GPU& gpu )
+    : gpu( gpu )
+{
+}
+
+kl::TextFormat const& UITextFormatHandler::get( float font_size )
+{
+    auto it = m_formats.find( font_size );
+    if ( it != m_formats.end() )
+        return it->second;
+    else
+        return m_formats.emplace( font_size, gpu.create_text_format( L"Roboto", DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, font_size ) ).first->second;
+}
+
+UIProduct::UIProduct( Renderer const& renderer )
+    : renderer( renderer )
+    , m_text_format_handler( renderer.game.world.system.gpu )
+{
+}
+
 void UIProduct::append_point( UIPoint const& point )
 {
     get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY_POINTLIST ).count += 1;
@@ -22,6 +42,28 @@ void UIProduct::append_triangle( UITriangle const& triangle )
     m_points.push_back( triangle.c );
 }
 
+void UIProduct::append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect )
+{
+    auto& window = renderer.game.world.system.window;
+    const float ar = window.aspect_ratio();
+    position.x /= ar;
+    rect.x /= ar;
+
+    const int2 window_size = window.size();
+    const float dip_font_height = ( font_height * 0.5f * window_size.y ) * 96.0f / window.dpi();
+    const flt2 pixel_position = ( flt2{ position.x, -position.y } + flt2{ 1.0f } ) * 0.5f * window_size;
+    const flt2 pixel_rect = rect * 0.5f * window_size;
+
+    auto& info = std::get<UITextRenderInfo>( m_render_info.emplace_back( UITextRenderInfo{} ) );
+    info.text.format = m_text_format_handler.get( dip_font_height );
+    info.text.color = color;
+    info.text.position = pixel_position;
+    info.text.rect_size = pixel_rect;
+    info.text.data.resize( text.size() );
+    for ( size_t i = 0; i < text.size(); i++ )
+        info.text.data[i] = (wchar_t) text[i];
+}
+
 void UIProduct::clear()
 {
     m_points.clear();
@@ -38,18 +80,17 @@ UINT UIProduct::point_count() const
     return (UINT) m_points.size();
 }
 
-std::vector<UIRenderInfo> const& UIProduct::render_info() const
+UIProduct::RenderInfoStorage const& UIProduct::render_info() const
 {
     return m_render_info;
 }
 
-UIRenderInfo& UIProduct::get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY topology )
+UIPointRenderInfo& UIProduct::get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY topology )
 {
-    return ( !m_render_info.empty() && m_render_info.back().topology == topology ) ? m_render_info.back() : m_render_info.emplace_back( UIRenderInfo{
-        .topology = topology,
-        .offset = (UINT) m_points.size(),
-        .count = 0,
-        } );
+    if ( !m_render_info.empty() && std::holds_alternative<UIPointRenderInfo>( m_render_info.back() ) && std::get<UIPointRenderInfo>( m_render_info.back() ).topology == topology )
+        return std::get<UIPointRenderInfo>( m_render_info.back() );
+    else
+        return std::get<UIPointRenderInfo>( m_render_info.emplace_back( UIPointRenderInfo{ .topology = topology, .offset = (UINT) m_points.size(), .count = 0 } ) );
 }
 
 void UIRectangle::produce( UIProduct& product ) const

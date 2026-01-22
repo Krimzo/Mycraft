@@ -37,6 +37,7 @@ void UIMesh::upload( UIPoint const* data, UINT count )
 
 UI::UI( Renderer const& renderer )
     : renderer( renderer )
+    , m_product( renderer )
     , m_mesh( renderer.game.world.system.gpu )
 {
     auto& gpu = renderer.game.world.system.gpu;
@@ -91,12 +92,19 @@ void UI::draw()
 
     gpu.bind_shaders( m_shaders );
     gpu.bind_vertex_buffer( m_mesh.buffer, 0, 0, sizeof( UIPoint ) );
-    for ( auto& info : m_product.render_info() )
+    for ( auto& info_variant : m_product.render_info() )
     {
-        gpu.set_draw_type( info.topology );
-        gpu.draw( info.count, info.offset );
+        if ( auto* point_info = std::get_if<UIPointRenderInfo>( &info_variant ) )
+        {
+            gpu.set_draw_type( point_info->topology );
+            gpu.draw( point_info->count, point_info->offset );
+        }
+        else if ( auto* text_info = std::get_if<UITextRenderInfo>( &info_variant ) )
+        {
+            gpu.draw_text_direct( text_info->text );
+        }
     }
-    gpu.draw_text();
+    gpu.draw_text_batch();
 
     gpu.unbind_blend_state();
 }
@@ -166,6 +174,6 @@ void UI::reload_main_menu()
 {
     UIRectangle main_menu_background;
     main_menu_background.center_align( { 0.0f, 0.0f }, { 1.0f, 1.25f } );
-    main_menu_background.color = { 0, 0, 0, 220 };
+    main_menu_background.color = { 0, 0, 0, 225 };
     main_menu_background.produce( m_product );
 }

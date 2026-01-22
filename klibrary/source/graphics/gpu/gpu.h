@@ -56,7 +56,8 @@ struct GPU : DeviceHolder, ContextHolder, ShaderCompiler, TextRaster
     ComputeShader create_compute_shader( std::string_view const& shader_source ) const;
     Shaders create_shaders( std::string_view const& shader_sources, std::vector<dx::LayoutDescriptor> const& descriptors = {} ) const;
 
-    void draw_text() const;
+    void draw_text_batch() const;
+    void draw_text_direct( Text const& text ) const;
 
 protected:
     GPU( HWND window, bool debug, bool video_support );

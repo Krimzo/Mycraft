@@ -1,6 +1,7 @@
 #pragma once
 
 #include "world/block.h"
+#include "render/renderer.h"
 
 
 struct UIPoint
@@ -24,31 +25,56 @@ struct UITriangle
     UIPoint c;
 };
 
-struct UIRenderInfo
+struct UIPointRenderInfo
 {
     D3D_PRIMITIVE_TOPOLOGY topology;
     UINT offset = 0;
     UINT count = 0;
 };
 
+struct UITextRenderInfo
+{
+    kl::Text text;
+};
+
+struct UITextFormatHandler
+{
+    kl::GPU& gpu;
+
+    UITextFormatHandler( kl::GPU& gpu );
+
+    kl::TextFormat const& get( float font_size );
+
+private:
+    std::map<float, kl::TextFormat> m_formats;
+};
+
 struct UIProduct
 {
+    using RenderInfoStorage = std::vector<std::variant<UIPointRenderInfo, UITextRenderInfo>>;
+
+    Renderer const& renderer;
+
+    UIProduct( Renderer const& renderer );
+
     void append_point( UIPoint const& point );
     void append_line( UILine const& line );
     void append_triangle( UITriangle const& triangle );
+    void append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect = {} );
 
     void clear();
 
     UIPoint const* point_data() const;
     UINT point_count() const;
 
-    std::vector<UIRenderInfo> const& render_info() const;
+    RenderInfoStorage const& render_info() const;
 
 private:
+    UITextFormatHandler m_text_format_handler;
     std::vector<UIPoint> m_points;
-    std::vector<UIRenderInfo> m_render_info;
+    RenderInfoStorage m_render_info;
 
-    UIRenderInfo& get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY topology );
+    UIPointRenderInfo& get_or_make_render_info( D3D_PRIMITIVE_TOPOLOGY topology );
 };
 
 struct UIRectangle
