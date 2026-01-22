@@ -140,7 +140,7 @@ void Renderer::render_raster()
     draw_sky( main_camera );
 
     raster_shadows( main_camera );
-    raster_chunks( main_camera, true, 0xFF );
+    raster_chunks( main_camera, nullptr, true, 0xFF );
     draw_hit_block( main_camera );
 
     auto& gpu = game.world.system.gpu;
@@ -149,48 +149,19 @@ void Renderer::render_raster()
     int portal_index = 0;
     for ( auto& portal : game.portals )
     {
-        const mat4 relative_matrix = portal->friend_portal.lock()->matrix() * kl::inverse( portal->matrix() );
+        const flt3 friend_position = portal->friend_portal.lock()->position;
+        const mat4 friend_matrix = portal->friend_portal.lock()->matrix();
+        const mat4 relative_matrix = friend_matrix * kl::inverse( portal->matrix() );
         kl::Camera portal_camera = main_camera;
         portal_camera.position = ( relative_matrix * flt4( main_camera.position, 1.0f ) ).xyz();
         portal_camera.set_forward( ( relative_matrix * flt4( main_camera.forward(), 0.0f ) ).xyz() );
         raster_shadows( portal_camera );
-        raster_chunks( portal_camera, false, portal_index++ );
-    }
-
-    // debug
-    if ( game.world.system.window.keyboard.f2 )
-    {
-        auto& gpu = game.world.system.gpu;
-
-        gpu.unbind_depth_state();
-        auto texture = gpu.back_depth_texture();
-        auto staging_texture = gpu.create_staging_texture( texture );
-        gpu.copy_resource( staging_texture, texture );
-
-        struct DepthStencilValue
-        {
-            int depth : 24;
-            int stencil : 8;
-        };
-
-        std::vector<DepthStencilValue> depth_stencil_values;
-        auto texture_size = gpu.texture_size( texture );
-        depth_stencil_values.resize( (size_t) texture_size.x * texture_size.y );
-        gpu.read_from_texture( depth_stencil_values.data(), staging_texture, texture_size, sizeof( DepthStencilValue ) );
-
-        kl::Image depth_stencil_frame;
-        depth_stencil_frame.resize( texture_size );
-        for ( int2 pos; pos.y < texture_size.y; ++pos.y )
-        {
-            for ( pos.x = 0; pos.x < texture_size.x; ++pos.x )
-            {
-                const int index = pos.to_index( depth_stencil_frame.width() );
-                auto& value = depth_stencil_values[index];
-                depth_stencil_frame[pos] = { (byte) value.stencil, (byte) value.stencil, (byte) value.stencil };
-            }
-        }
-        depth_stencil_frame.save_to_file( R"(C:\Users\ivan\Desktop\depth_frame.png)", kl::ImageType::PNG );
-        exit( 17 );
+        plane clipping_plane;
+        clipping_plane.position = friend_position;
+        clipping_plane.set_normal( ( friend_matrix * flt4( 0.0f, 0.0f, 1.0f, 0.0f ) ).xyz() );
+        if ( clipping_plane.in_front( portal_camera.position ) )
+            clipping_plane.set_normal( -clipping_plane.normal() );
+        raster_chunks( portal_camera, &clipping_plane, false, portal_index++ );
     }
 }
 
@@ -316,7 +287,7 @@ void Renderer::raster_shadows( kl::Camera const& camera )
     gpu.set_viewport_size( game.world.system.window.size() );
 }
 
-void Renderer::raster_chunks( kl::Camera const& camera, bool should_write_stencil, UINT stencil_ref )
+void Renderer::raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref )
 {
     auto& gpu = game.world.system.gpu;
 
@@ -338,6 +309,9 @@ void Renderer::raster_chunks( kl::Camera const& camera, bool should_write_stenci
         flt3 SUN_DIRECTION;
         float RENDER_DISTANCE;
         flt2 SHADOW_TEXEL_SIZE;
+        float ENABLE_CLIPPING_PLANE;
+        alignas( 16 ) flt3 CLIPPING_PLANE_POSITION;
+        alignas( 16 ) flt3 CLIPPING_PLANE_NORMAL;
     } cb = {};
 
     cb.VP = camera.matrix();
@@ -347,6 +321,9 @@ void Renderer::raster_chunks( kl::Camera const& camera, bool should_write_stenci
     cb.SUN_DIRECTION = game.environment.sun.direction();
     cb.RENDER_DISTANCE = (float) game.world.render_distance();
     cb.SHADOW_TEXEL_SIZE = flt2{ 1.0f / game.environment.sun.resolution() };
+    cb.ENABLE_CLIPPING_PLANE = (float) (bool) clipping_plane;
+    cb.CLIPPING_PLANE_POSITION = clipping_plane ? clipping_plane->position : flt3{};
+    cb.CLIPPING_PLANE_NORMAL = clipping_plane ? clipping_plane->normal() : flt3{};
     raster_chunk_shaders.upload( cb );
 
     plane camera_plane;

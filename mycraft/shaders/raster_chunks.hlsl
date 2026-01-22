@@ -23,6 +23,9 @@ float ELAPSED_TIME;
 float3 SUN_DIRECTION;
 float RENDER_DISTANCE;
 float2 SHADOW_TEXEL_SIZE;
+float ENABLE_CLIPPING_PLANE;
+float3 CLIPPING_PLANE_POSITION;
+float3 CLIPPING_PLANE_NORMAL;
 
 Texture2D SHADOW_TEXTURE : register(t0);
 Texture2D ATLAS_TEXTURE : register(t1);
@@ -75,6 +78,14 @@ VS_OUT v_shader(float3 position : KL_Position, uint textur : KL_Texture, uint am
 
 float4 p_shader(VS_OUT data) : SV_Target0
 {
+    if (ENABLE_CLIPPING_PLANE)
+    {
+        float3 plane_to_world = normalize(data.world - CLIPPING_PLANE_POSITION);
+        float plane_world_dot = dot(plane_to_world, CLIPPING_PLANE_NORMAL);
+        if (plane_world_dot < 0.0f)
+            discard;
+    }
+    
     float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.textur);
     if (color.a < 1.0f)
         discard;

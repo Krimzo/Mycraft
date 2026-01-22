@@ -59,7 +59,7 @@ struct Portal
 {
     flt3 position;
     flt3 rotation;
-    static inline constexpr flt3 scale = { 1.5f, 2.5f, 0.1f };
+    static inline constexpr flt3 scale = { 1.5f, 2.5f, 0.001f };
     std::weak_ptr<Portal> friend_portal;
 
     mat4 matrix() const;
