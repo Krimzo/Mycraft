@@ -176,4 +176,10 @@ void UI::reload_main_menu()
     main_menu_background.center_align( { 0.0f, 0.0f }, { 1.0f, 1.25f } );
     main_menu_background.color = { 0, 0, 0, 225 };
     main_menu_background.produce( m_product );
+
+    auto& window = renderer.game.world.system.window;
+    ui_button( "EXIT", { 0.0f, -0.5f }, { 0.2f, 0.1f }, rgb{ 30, 30, 30, 255 }, [&]
+        {
+            window.close();
+        } );
 }

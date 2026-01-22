@@ -16,6 +16,7 @@ struct Text
     kl::Float4 color{ 1.0f };
     kl::Float2 position;
     kl::Float2 rect_size;
+    bool center = false;
     std::wstring data;
 };
 }

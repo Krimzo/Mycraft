@@ -42,7 +42,7 @@ void UIProduct::append_triangle( UITriangle const& triangle )
     m_points.push_back( triangle.c );
 }
 
-void UIProduct::append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect )
+void UIProduct::append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect, bool center )
 {
     auto& window = renderer.game.world.system.window;
     const float ar = window.aspect_ratio();
@@ -59,6 +59,7 @@ void UIProduct::append_text( std::string_view const& text, flt4 const& color, fl
     info.text.color = color;
     info.text.position = pixel_position;
     info.text.rect_size = pixel_rect;
+    info.text.center = center;
     info.text.data.resize( text.size() );
     for ( size_t i = 0; i < text.size(); i++ )
         info.text.data[i] = (wchar_t) text[i];
