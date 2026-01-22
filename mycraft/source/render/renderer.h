@@ -11,6 +11,7 @@ struct Renderer
     dx::RasterState cull_raster;
     dx::RasterState no_cull_raster;
     dx::RasterState wireframe_raster;
+    dx::RasterState ui_raster;
 
     dx::DepthState enabled_depth;
     dx::DepthState disabled_depth;

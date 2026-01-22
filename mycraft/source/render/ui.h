@@ -23,7 +23,6 @@ struct UI
     UI( Renderer const& renderer );
 
     void update();
-    void render();
 
 private:
     kl::Shaders m_shaders;
@@ -32,9 +31,14 @@ private:
     UIMesh m_line_mesh;
     UIMesh m_point_mesh;
 
-    void reload_shapes();
-    void reload_meshes();
+    void reload();
+    void draw();
 
-    void make_crosshair();
-    void make_toolbar();
+    void reload_state_playing();
+    void reload_state_main_menu();
+    void reload_state_exit();
+
+    void reload_crosshair();
+    void reload_toolbar();
+    void reload_main_menu();
 };

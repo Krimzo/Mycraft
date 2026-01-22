@@ -5,6 +5,7 @@
 
 struct UIPoint
 {
+    byte layer = 0;
     flt2 position;
     flt4 color;
     flt2 texture;
@@ -35,6 +36,7 @@ struct UIProduct
 
 struct UIRectangle
 {
+    byte layer = 0;
     flt2 position;
     flt2 size;
     rgb color;
@@ -43,4 +45,5 @@ struct UIRectangle
     float tex_blend = 0.0f;
 
     void produce( UIProduct& product ) const;
+    void center_align( flt2 center, flt2 scale );
 };

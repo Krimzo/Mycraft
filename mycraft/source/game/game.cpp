@@ -164,10 +164,12 @@ void Game::state_playing_update_keyboard_input()
     auto& keyboard = window.keyboard;
     auto& mouse = window.mouse;
     auto& gpu = world.system.gpu;
+    auto& timer = world.system.timer;
 
     if ( keyboard.esc.pressed() )
     {
         game_state = GameState::MAIN_MENU;
+        timer.stop();
         mouse.set_hidden( false );
     }
     if ( keyboard.f11.pressed() )
@@ -335,12 +337,14 @@ void Game::state_main_menu_update_keyboard_input()
     auto& keyboard = window.keyboard;
     auto& mouse = window.mouse;
     auto& gpu = world.system.gpu;
+    auto& timer = world.system.timer;
 
     if ( keyboard.esc.pressed() )
     {
         game_state = GameState::PLAYING;
         mouse.set_hidden( true );
         window.mouse.set_position( window.frame_center() );
+        timer.start();
     }
     if ( keyboard.f11.pressed() )
     {

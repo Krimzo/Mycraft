@@ -12,13 +12,17 @@ Renderer::Renderer( Game& game )
     shadow_raster_descriptor.CullMode = D3D11_CULL_BACK;
     shadow_raster_descriptor.SlopeScaledDepthBias = 2.5f;
 
+    dx::RasterStateDescriptor ui_raster_descriptor{};
+    ui_raster_descriptor.FillMode = D3D11_FILL_SOLID;
+    ui_raster_descriptor.CullMode = D3D11_CULL_NONE;
+    ui_raster_descriptor.AntialiasedLineEnable = true;
+    ui_raster_descriptor.MultisampleEnable = true;
+
     shadow_raster = gpu.create_raster_state( &shadow_raster_descriptor );
     cull_raster = gpu.create_raster_state( false, true );
     no_cull_raster = gpu.create_raster_state( false, false );
     wireframe_raster = gpu.create_raster_state( true, true );
-
-    enabled_depth = gpu.create_depth_state( true );
-    disabled_depth = gpu.create_depth_state( false );
+    ui_raster = gpu.create_raster_state( &ui_raster_descriptor );
 
     dx::DepthStateDescriptor write_depth_stencil_descriptor{};
     write_depth_stencil_descriptor.DepthEnable = true;
@@ -35,7 +39,6 @@ Renderer::Renderer( Game& game )
     write_depth_stencil_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
     write_depth_stencil_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
     write_depth_stencil_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-    write_stencil = gpu.create_depth_state( &write_depth_stencil_descriptor );
 
     dx::DepthStateDescriptor compare_stencil_descriptor{};
     compare_stencil_descriptor.DepthEnable = true;
@@ -52,6 +55,10 @@ Renderer::Renderer( Game& game )
     compare_stencil_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
     compare_stencil_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     compare_stencil_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+
+    enabled_depth = gpu.create_depth_state( true );
+    disabled_depth = gpu.create_depth_state( false );
+    write_stencil = gpu.create_depth_state( &write_depth_stencil_descriptor );
     compare_stencil = gpu.create_depth_state( &compare_stencil_descriptor );
 
     dx::SamplerStateDescriptor shadow_sampler_descriptor{};

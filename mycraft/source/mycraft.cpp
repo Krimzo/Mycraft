@@ -14,8 +14,7 @@ Mycraft::~Mycraft()
 bool Mycraft::update()
 {
     game.update();
-    ui.update();
     renderer.render();
-    ui.render();
+    ui.update();
     return system.update();
 }
