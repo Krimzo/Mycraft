@@ -57,9 +57,9 @@ struct Player
 
 struct Portal
 {
-    flt3 position;
+    flt3 scale = { 2.0f, 3.0f, 0.001f };
     flt3 rotation;
-    static constexpr flt3 scale = { 1.5f, 2.5f, 0.001f };
+    flt3 position;
     std::weak_ptr<Portal> friend_portal;
 
     mat4 matrix() const;

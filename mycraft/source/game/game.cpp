@@ -23,17 +23,16 @@ void Player::set_position( flt3 const& position )
 
 mat4 Portal::matrix() const
 {
-    return mat4::translation( position ) * mat4::rotation( rotation ) * mat4::scaling( scale );
+    static constexpr mat4 HALF_BOX_TRANSLATION = mat4::translation( flt3{ .5f } );
+    return mat4::translation( position ) * mat4::rotation( rotation ) * mat4::scaling( scale ) * HALF_BOX_TRANSLATION;
 }
 
 Game::Game( World& world )
     : world( world )
     , environment( world.system.gpu )
 {
-    auto& window = world.system.window;
-    window.mouse.set_position( window.frame_center() );
     player.camera.position = { 5.0f, 5.0f, 5.0f };
-    player.camera.set_forward( { 1.0f, -1.0f, 1.0f } );
+    player.camera.set_forward( { 0.0f, 0.0f, 1.0f } );
 
     int counter = 0;
     for ( auto value : { Block::GRASS, Block::DIRT, Block::STONE, Block::COBBLE, Block::WOOD, Block::PLANKS, Block::COBWEB, Block::ROSE, Block::DANDELION } )
@@ -45,12 +44,12 @@ Game::Game( World& world )
     std::shared_ptr<Portal> portal_a = std::make_shared<Portal>();
     std::shared_ptr<Portal> portal_b = std::make_shared<Portal>();
 
-    portal_a->position = { 9.0f, 4.25f, 9.0f };
-    portal_a->rotation = { 0.0f, -45.0f, 0.0f };
+    portal_a->rotation = { 0.0f, 90.0f, 0.0f };
+    portal_a->position = { 9.0f, 3.0f, 9.0f };
     portal_a->friend_portal = portal_b;
 
-    portal_b->position = { -9.0f, 4.25f, -9.0f };
-    portal_b->rotation = { 0.0f, 45.0f, 0.0f };
+    portal_b->rotation = { 0.0f, -90.0f, 0.0f };
+    portal_b->position = { -9.0f, 3.0f, -9.0f };
     portal_b->friend_portal = portal_a;
 
     portals.push_back( portal_a );
