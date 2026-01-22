@@ -8,7 +8,7 @@ void UIProduct::clear()
     triangles.clear();
 }
 
-void UIRectangle::generate( UIProduct& product ) const
+void UIRectangle::produce( UIProduct& product ) const
 {
     const flt2 w_tl = { position.x, position.y + size.y };
     const flt2 w_tr = { position.x + size.x, position.y + size.y };

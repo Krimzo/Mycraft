@@ -42,5 +42,5 @@ struct UIRectangle
     flt2 uv_br{ 1.0f };
     float tex_blend = 0.0f;
 
-    void generate( UIProduct& product ) const;
+    void produce( UIProduct& product ) const;
 };

@@ -97,7 +97,7 @@ void UI::make_toolbar()
     auto& inventory = renderer.game.player.inventory;
 
     UIRectangle toolbar{ toolbar_position, toolbar_size, rgb( 0, 0, 0, 190 ) };
-    toolbar.generate( m_product );
+    toolbar.produce( m_product );
 
     for ( int i = 0; i < Inventory::HORIZONTAL_COUNT; i++ )
     {
@@ -106,11 +106,11 @@ void UI::make_toolbar()
         {
             static constexpr flt2 extension = toolbar_padding * 0.5f;
             UIRectangle selected{ item_position - extension, item_size + extension * 2.0f, rgb( 220, 220, 220, 190 ) };
-            selected.generate( m_product );
+            selected.produce( m_product );
         }
         const Block block = inventory.toolbar[i].value_or( Block::AIR );
         UIRectangle item{ item_position, item_size, {},
             atlas_uv( block, flt2{ 0.0f } ), atlas_uv( block, flt2{ 1.0f } ), 1.0f };
-        item.generate( m_product );
+        item.produce( m_product );
     }
 }
