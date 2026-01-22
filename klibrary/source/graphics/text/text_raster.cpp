@@ -17,6 +17,8 @@ kl::TextFormat kl::TextRaster::create_text_format(
     std::wstring_view const& locale
 ) const
 {
+    if ( font_size <= 0.0f )
+        return {};
     TextFormat format;
     m_write_factory->CreateTextFormat(
         font_family.data(), nullptr, font_weight, font_style, DWRITE_FONT_STRETCH_NORMAL,
@@ -35,6 +37,9 @@ void kl::TextRaster::draw_text_batch( UINT target_index ) const
     target->BeginDraw();
     for ( auto& text : text_batch )
     {
+        if ( !text.format )
+            continue;
+
         layout_rect.left = text.position.x;
         layout_rect.top = text.position.y;
         layout_rect.right = layout_rect.left + ( text.rect_size.x > 0.0f ? text.rect_size.x : ( target_size.width - layout_rect.left ) );
@@ -61,6 +66,9 @@ void kl::TextRaster::draw_text_batch( UINT target_index ) const
 
 void kl::TextRaster::draw_text_direct( UINT target_index, Text const& text ) const
 {
+    if ( !text.format )
+        return;
+
     auto& target = m_d2d1_targets[target_index];
     D2D1_SIZE_F target_size = target->GetSize();
 
