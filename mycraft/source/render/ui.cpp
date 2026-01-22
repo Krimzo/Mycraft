@@ -86,8 +86,8 @@ void UI::make_crosshair()
 
 void UI::make_toolbar()
 {
-    static constexpr flt2 item_size = { 0.08f, 0.08f };
-    static constexpr flt2 toolbar_padding = { 0.01f, 0.01f };
+    static constexpr flt2 item_size{ 0.08f };
+    static constexpr flt2 toolbar_padding{ 0.01f };
     static constexpr flt2 toolbar_size = {
         toolbar_padding.x + Inventory::HORIZONTAL_COUNT * ( item_size.x + toolbar_padding.x ),
         toolbar_padding.y + item_size.y + toolbar_padding.y,
@@ -108,7 +108,9 @@ void UI::make_toolbar()
             UIRectangle selected{ item_position - extension, item_size + extension * 2.0f, rgb( 220, 220, 220, 190 ) };
             selected.generate( m_product );
         }
-        UIRectangle item{ item_position, item_size, {}, inventory.toolbar[i].value_or( Block::AIR ), 1.0f };
+        const Block block = inventory.toolbar[i].value_or( Block::AIR );
+        UIRectangle item{ item_position, item_size, {},
+            atlas_uv( block, flt2{ 0.0f } ), atlas_uv( block, flt2{ 1.0f } ), 1.0f };
         item.generate( m_product );
     }
 }

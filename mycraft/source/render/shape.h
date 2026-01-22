@@ -38,8 +38,9 @@ struct UIRectangle
     flt2 position;
     flt2 size;
     rgb color;
-    Block block = Block::AIR;
-    float blend = 0.0f;
+    flt2 uv_tl{ 0.0f };
+    flt2 uv_br{ 1.0f };
+    float tex_blend = 0.0f;
 
     void generate( UIProduct& product ) const;
 };
