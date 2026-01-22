@@ -1,8 +1,52 @@
 #include "render/ui.h"
 
 
+UIMesh::UIMesh( kl::GPU& gpu )
+    : gpu( gpu )
+{
+}
+
+void UIMesh::upload( UIPoint const* data, UINT count )
+{
+    if ( count <= 0 )
+        return;
+    point_count = count;
+
+    const UINT buffer_size = gpu.vertex_buffer_size( buffer, sizeof( UIPoint ) );
+    if ( buffer_size >= count )
+    {
+        gpu.write_to_buffer( buffer, data, count * sizeof( UIPoint ), true );
+        return;
+    }
+
+    dx::BufferDescriptor descriptor{};
+    descriptor.ByteWidth = count * sizeof( UIPoint );
+    descriptor.Usage = D3D11_USAGE_DYNAMIC;
+    descriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    descriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    dx::SubresourceDescriptor subresource_data{};
+    subresource_data.pSysMem = data;
+    buffer = gpu.create_buffer( &descriptor, &subresource_data );
+
+    if constexpr ( kl::IS_DEBUG )
+        kl::print( "Created UI buffer: ", count, " UIPoint-s (", count * sizeof( UIPoint ), " bytes)" );
+}
+
+void UIMesh::draw( D3D_PRIMITIVE_TOPOLOGY topology ) const
+{
+    if ( !buffer )
+        return;
+
+    gpu.set_draw_type( topology );
+    gpu.bind_vertex_buffer( buffer, 0, 0, sizeof( UIPoint ) );
+    gpu.draw( point_count, 0 );
+}
+
 UI::UI( Renderer const& renderer )
     : renderer( renderer )
+    , m_triangle_mesh( renderer.game.world.system.gpu )
+    , m_line_mesh( renderer.game.world.system.gpu )
+    , m_point_mesh( renderer.game.world.system.gpu )
 {
     auto& gpu = renderer.game.world.system.gpu;
     std::vector<dx::LayoutDescriptor> ui_input_layout = {
@@ -40,20 +84,12 @@ void UI::render()
     m_shaders.upload( cb );
 
     gpu.bind_shaders( m_shaders );
-    gpu.draw( m_triangle_mesh, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, sizeof( UIPoint ) );
-    gpu.draw( m_line_mesh, D3D_PRIMITIVE_TOPOLOGY_LINELIST, sizeof( UIPoint ) );
-    gpu.draw( m_point_mesh, D3D_PRIMITIVE_TOPOLOGY_POINTLIST, sizeof( UIPoint ) );
+    m_triangle_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+    m_line_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_LINELIST );
+    m_point_mesh.draw( D3D_PRIMITIVE_TOPOLOGY_POINTLIST );
     gpu.draw_text();
 
     gpu.unbind_blend_state();
-}
-
-dx::Buffer UI::create_mesh( UIPoint* data, UINT count ) const
-{
-    if ( count <= 0 )
-        return {};
-    auto& gpu = renderer.game.world.system.gpu;
-    return gpu.create_vertex_buffer( data, count * sizeof( UIPoint ) );
 }
 
 void UI::reload_shapes()
@@ -65,9 +101,9 @@ void UI::reload_shapes()
 
 void UI::reload_meshes()
 {
-    m_point_mesh = create_mesh( (UIPoint*) m_product.points.data(), (UINT) m_product.points.size() * 1 );
-    m_line_mesh = create_mesh( (UIPoint*) m_product.lines.data(), (UINT) m_product.lines.size() * 2 );
-    m_triangle_mesh = create_mesh( (UIPoint*) m_product.triangles.data(), (UINT) m_product.triangles.size() * 3 );
+    m_triangle_mesh.upload( (UIPoint*) m_product.triangles.data(), (UINT) m_product.triangles.size() * 3 );
+    m_line_mesh.upload( (UIPoint*) m_product.lines.data(), (UINT) m_product.lines.size() * 2 );
+    m_point_mesh.upload( (UIPoint*) m_product.points.data(), (UINT) m_product.points.size() * 1 );
 }
 
 void UI::make_crosshair()

@@ -4,6 +4,18 @@
 #include "render/renderer.h"
 
 
+struct UIMesh
+{
+    kl::GPU& gpu;
+    dx::Buffer buffer;
+    UINT point_count = 0;
+
+    UIMesh( kl::GPU& gpu );
+
+    void upload( UIPoint const* data, UINT count );
+    void draw( D3D_PRIMITIVE_TOPOLOGY topology ) const;
+};
+
 struct UI
 {
     Renderer const& renderer;
@@ -16,11 +28,9 @@ struct UI
 private:
     kl::Shaders m_shaders;
     UIProduct m_product;
-    dx::Buffer m_triangle_mesh;
-    dx::Buffer m_line_mesh;
-    dx::Buffer m_point_mesh;
-
-    dx::Buffer create_mesh( UIPoint* data, UINT count ) const;
+    UIMesh m_triangle_mesh;
+    UIMesh m_line_mesh;
+    UIMesh m_point_mesh;
 
     void reload_shapes();
     void reload_meshes();
