@@ -218,7 +218,7 @@ void Renderer::draw_portals_stencil( kl::Camera const& camera )
     {
         gpu.bind_depth_state( write_stencil, portal_index++ );
 
-        cb.WVP = camera.matrix() * portal->matrix();
+        cb.WVP = camera.matrix() * portal.matrix();
         portal_stencil_shaders.upload( cb );
 
         gpu.draw( portal_mesh );
@@ -234,9 +234,9 @@ void Renderer::draw_portals( kl::Camera const& camera )
     int portal_index = 0;
     for ( auto& portal : game.portals )
     {
-        const flt3 friend_position = portal->friend_portal.lock()->position;
-        const mat4 friend_matrix = portal->friend_portal.lock()->matrix();
-        const mat4 relative_matrix = friend_matrix * kl::inverse( portal->matrix() );
+        const flt3 friend_position = portal.friend_portal->position;
+        const mat4 friend_matrix = portal.friend_portal->matrix();
+        const mat4 relative_matrix = friend_matrix * kl::inverse( portal.matrix() );
 
         kl::Camera portal_camera = camera;
         portal_camera.position = ( relative_matrix * flt4( camera.position, 1.0f ) ).xyz();
