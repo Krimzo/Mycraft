@@ -117,7 +117,7 @@ Renderer::Renderer( Game& game )
             this->game.world.system.gpu.set_viewport_size( size );
             this->game.player.camera.update_aspect_ratio( size );
         } );
-    window.set_fullscreen( true );
+    gpu.set_fullscreen( true );
     window.mouse.set_position( window.frame_center() );
 }
 

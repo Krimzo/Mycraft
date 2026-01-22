@@ -162,9 +162,7 @@ void Game::handle_keyboard_input()
     }
     if ( window.keyboard.f11.pressed() )
     {
-        bool new_state = !window.fullscreened();
-        window.set_fullscreen( new_state );
-        gpu.set_fullscreen( new_state );
+        gpu.set_fullscreen( !gpu.fullscreened() );
     }
     if ( window.keyboard.comma.pressed() )
     {
