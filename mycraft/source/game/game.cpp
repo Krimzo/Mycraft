@@ -77,6 +77,29 @@ float Game::max_view_distance() const
     return ( first_point - center_point ).length();
 }
 
+void Game::pause()
+{
+    auto& window = world.system.window;
+    auto& mouse = window.mouse;
+    auto& timer = world.system.timer;
+
+    game_state = GameState::MAIN_MENU;
+    timer.stop();
+    mouse.set_hidden( false );
+}
+
+void Game::resume()
+{
+    auto& window = world.system.window;
+    auto& mouse = window.mouse;
+    auto& timer = world.system.timer;
+
+    game_state = GameState::PLAYING;
+    mouse.set_hidden( true );
+    mouse.set_position( window.frame_center() );
+    timer.start();
+}
+
 void Game::update_state_playing()
 {
     float delta_t = world.system.timer.delta();
@@ -168,9 +191,7 @@ void Game::state_playing_update_keyboard_input()
 
     if ( keyboard.esc.pressed() )
     {
-        game_state = GameState::MAIN_MENU;
-        timer.stop();
-        mouse.set_hidden( false );
+        pause();
     }
     if ( keyboard.f11.pressed() )
     {
@@ -341,10 +362,7 @@ void Game::state_main_menu_update_keyboard_input()
 
     if ( keyboard.esc.pressed() )
     {
-        game_state = GameState::PLAYING;
-        mouse.set_hidden( true );
-        window.mouse.set_position( window.frame_center() );
-        timer.start();
+        resume();
     }
     if ( keyboard.f11.pressed() )
     {

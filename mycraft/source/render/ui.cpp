@@ -174,12 +174,33 @@ void UI::reload_main_menu()
 {
     UIRectangle main_menu_background;
     main_menu_background.center_align( { 0.0f, 0.0f }, { 1.0f, 1.25f } );
-    main_menu_background.color = { 0, 0, 0, 225 };
+    main_menu_background.color = { 15, 15, 15, 250 };
     main_menu_background.produce( m_product );
 
-    auto& window = renderer.game.world.system.window;
-    ui_button( "EXIT", { 0.0f, -0.5f }, { 0.2f, 0.1f }, rgb{ 30, 30, 30, 255 }, [&]
-        {
-            window.close();
-        } );
+    auto& game = renderer.game;
+    auto& window = game.world.system.window;
+
+    static const flt4 DEFAULT_COLOR = rgb{ 30, 30, 30 };
+    static const flt4 ENABLED_COLOR = rgb{ 150, 230, 80 };
+    static const flt4 DISABLED_COLOR = rgb{ 225, 125, 80 };
+    static const flt4 LIGHT_TEXT_COLOR = rgb{ 240, 240, 240 };
+    static const flt4 DARK_TEXT_COLOR = rgb{ 30, 30, 30 };
+
+    if ( ui_button( "RESUME", { 0.0f, 0.35f }, { 0.5f, 0.1f }, DEFAULT_COLOR, LIGHT_TEXT_COLOR ) )
+    {
+        game.resume();
+        return; // because mouse.set_position(window.frame_center()) inside game.resume() will cause unintended button press
+    }
+
+    if ( ui_button( "V-SYNC", { 0.0f, 0.2f }, { 0.5f, 0.1f }, game.world.system.vsync ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
+        game.world.system.vsync = !game.world.system.vsync;
+
+    if ( ui_button( "WIREFRAME", { 0.0f, 0.05f }, { 0.5f, 0.1f }, game.world.system.wireframe ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
+        game.world.system.wireframe = !game.world.system.wireframe;
+
+    if ( ui_button( "RAYTRACING", { 0.0f, -0.1f }, { 0.5f, 0.1f }, ( game.render_mode == RenderMode::TRACING ) ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
+        game.render_mode = ( game.render_mode == RenderMode::TRACING ) ? RenderMode::RASTER : RenderMode::TRACING;
+
+    if ( ui_button( "EXIT", { 0.0f, -0.25f }, { 0.5f, 0.1f }, DEFAULT_COLOR, LIGHT_TEXT_COLOR ) )
+        window.close();
 }

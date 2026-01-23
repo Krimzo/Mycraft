@@ -94,6 +94,9 @@ struct Game
     float current_daytime() const;
     float max_view_distance() const;
 
+    void pause();
+    void resume();
+
 private:
     // PLAYING
     void update_state_playing();
