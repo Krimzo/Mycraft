@@ -33,6 +33,8 @@ Game::Game( World& world )
 {
     player.camera.position = { 5.0f, 5.0f, 5.0f };
     player.camera.set_forward( { 0.0f, 0.0f, 1.0f } );
+    player.camera.field_of_view = 105.0f;
+    player.prev_cam_pos = player.camera.position;
 
     int counter = 0;
     for ( auto value : { Block::GRASS, Block::DIRT, Block::STONE, Block::COBBLE, Block::WOOD, Block::PLANKS, Block::COBWEB, Block::ROSE, Block::DANDELION } )
@@ -44,12 +46,12 @@ Game::Game( World& world )
     Portal& portal_a = portals.emplace_back();
     Portal& portal_b = portals.emplace_back();
 
-    portal_a.rotation = { 0.0f, 90.0f, 0.0f };
-    portal_a.position = { 9.0f, 3.0f, 9.0f };
+    portal_a.rotation = { 0.0f, -90.0f, 0.0f };
+    portal_a.position = { 10.0f, 10.0f, 1.0f };
     portal_a.friend_portal = &portal_b;
 
-    portal_b.rotation = { 0.0f, -90.0f, 0.0f };
-    portal_b.position = { -9.0f, 3.0f, -9.0f };
+    portal_b.rotation = { 0.0f, 180.0f, 0.0f };
+    portal_b.position = { -9.0f, 3.0f, 23.0f };
     portal_b.friend_portal = &portal_a;
 }
 
@@ -115,6 +117,7 @@ void Game::update_state_playing()
         state_playing_update_survival_velocity( delta_t );
         state_playing_update_survival_collisions( delta_t );
     }
+    state_playing_update_portals();
     state_playing_update_time();
     state_playing_update_world();
 }
@@ -327,6 +330,37 @@ void Game::state_playing_update_survival_collisions( float delta_t )
         player.set_position( player_pos );
         player.velocity = {};
     }
+}
+
+void Game::state_playing_update_portals()
+{
+    static constexpr aabb PORTAL_OBJ_AABB = { flt3{ 0.0f }, flt3{ 0.5f } };
+    static constexpr float MOVE_BIAS = 0.01f;
+    if ( player.camera.position == player.prev_cam_pos )
+        return;
+    for ( auto& portal : portals )
+    {
+        const mat4 inv_obj_mat = kl::inverse( portal.matrix() );
+        const flt3 obj_player_pos = ( inv_obj_mat * flt4( player.camera.position, 1.0f ) ).xyz();
+        const flt3 obj_prev_cam_pos = ( inv_obj_mat * flt4( player.prev_cam_pos, 1.0f ) ).xyz();
+        ray obj_ray = { obj_prev_cam_pos, obj_player_pos - obj_prev_cam_pos };
+        flt3 intersection;
+        if ( !obj_ray.intersect_aabb( PORTAL_OBJ_AABB, &intersection ) )
+            continue;
+        if ( ( intersection - obj_prev_cam_pos ).length() > ( obj_player_pos - obj_prev_cam_pos ).length() )
+            continue;
+        obj_ray.origin += obj_ray.direction() * ( ( intersection - obj_ray.origin ).length() + kl::sqrt( 3.0f ) );
+        obj_ray.set_direction( -obj_ray.direction() );
+        if ( !obj_ray.intersect_aabb( PORTAL_OBJ_AABB, &intersection ) )
+            continue;
+        intersection -= obj_ray.direction() * MOVE_BIAS;
+        const mat4 friend_mat = portal.friend_portal->matrix();
+        const flt3 inv_player_forward = ( inv_obj_mat * flt4( player.camera.forward(), 0.0f ) ).xyz();
+        player.camera.position = ( friend_mat * flt4( intersection, 1.0f ) ).xyz();
+        player.camera.set_forward( ( friend_mat * flt4( inv_player_forward, 0.0f ) ).xyz() );
+        break;
+    }
+    player.prev_cam_pos = player.camera.position;
 }
 
 void Game::state_playing_update_time()

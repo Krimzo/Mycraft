@@ -60,7 +60,7 @@ struct UIProduct
     void append_point( UIPoint const& point );
     void append_line( UILine const& line );
     void append_triangle( UITriangle const& triangle );
-    void append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect = {}, bool center = false );
+    void append_text( std::string_view const& text, flt4 const& color, float font_height, flt2 position, flt2 rect = {}, bool hor_center = false, bool ver_center = false );
 
     void clear();
 

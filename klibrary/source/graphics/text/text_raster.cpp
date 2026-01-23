@@ -45,6 +45,9 @@ void kl::TextRaster::draw_text_batch( UINT target_index ) const
         layout_rect.right = layout_rect.left + ( text.rect_size.x > 0.0f ? text.rect_size.x : ( target_size.width - layout_rect.left ) );
         layout_rect.bottom = layout_rect.top + ( text.rect_size.y > 0.0f ? text.rect_size.y : ( target_size.height - layout_rect.top ) );
 
+        text.format->SetTextAlignment( text.hor_center ? DWRITE_TEXT_ALIGNMENT_CENTER : DWRITE_TEXT_ALIGNMENT_LEADING );
+        text.format->SetParagraphAlignment( text.ver_center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : DWRITE_PARAGRAPH_ALIGNMENT_NEAR );
+
         target->CreateSolidColorBrush(
             D2D1_COLOR_F{
                 .r = text.color.x,
@@ -79,8 +82,8 @@ void kl::TextRaster::draw_text_direct( UINT target_index, Text const& text ) con
     layout_rect.right = layout_rect.left + ( text.rect_size.x > 0.0f ? text.rect_size.x : ( target_size.width - layout_rect.left ) );
     layout_rect.bottom = layout_rect.top + ( text.rect_size.y > 0.0f ? text.rect_size.y : ( target_size.height - layout_rect.top ) );
 
-    text.format->SetTextAlignment( text.center ? DWRITE_TEXT_ALIGNMENT_CENTER : DWRITE_TEXT_ALIGNMENT_LEADING );
-    text.format->SetParagraphAlignment( text.center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : DWRITE_PARAGRAPH_ALIGNMENT_NEAR );
+    text.format->SetTextAlignment( text.hor_center ? DWRITE_TEXT_ALIGNMENT_CENTER : DWRITE_TEXT_ALIGNMENT_LEADING );
+    text.format->SetParagraphAlignment( text.ver_center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : DWRITE_PARAGRAPH_ALIGNMENT_NEAR );
 
     target->BeginDraw();
 

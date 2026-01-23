@@ -64,7 +64,7 @@ private:
             scale.y * 0.7f,
             flt2{ center.x - scale.x * 0.5f, center.y + scale.y * 0.5f },
             scale,
-            true );
+            true, true );
 
         return state;
     }

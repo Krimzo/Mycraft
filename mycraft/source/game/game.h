@@ -44,6 +44,7 @@ struct Player
 
     kl::Camera camera;
     flt3 velocity;
+    flt3 prev_cam_pos;
 
     float jump_speed = 5.0f;
     float walk_speed = 2.5f;
@@ -106,6 +107,7 @@ private:
     void state_playing_update_survival_movement( float delta_t );
     void state_playing_update_survival_velocity( float delta_t );
     void state_playing_update_survival_collisions( float delta_t );
+    void state_playing_update_portals();
     void state_playing_update_time();
     void state_playing_update_world();
 
