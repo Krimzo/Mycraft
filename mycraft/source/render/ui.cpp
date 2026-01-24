@@ -47,7 +47,7 @@ UI::UI( Renderer const& renderer )
         { "KL_UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Blend", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    m_shaders = gpu.create_shaders( kl::read_file( "shaders/draw_ui.hlsl" ), ui_input_layout );
+    m_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_ui.hlsl" ), ui_input_layout );
 }
 
 void UI::update()

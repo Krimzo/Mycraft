@@ -51,14 +51,12 @@ void UIProduct::append_text( std::string_view const& text, flt4 const& color, fl
 
     const int2 window_size = window.size();
     const float dip_font_height = ( font_height * 0.5f * window_size.y ) * 96.0f / window.dpi();
-    const flt2 pixel_position = ( flt2{ position.x, -position.y } + flt2{ 1.0f } ) * 0.5f * window_size;
-    const flt2 pixel_rect = rect * 0.5f * window_size;
 
     auto& info = std::get<UITextRenderInfo>( m_render_info.emplace_back( UITextRenderInfo{} ) );
     info.text.format = m_text_format_handler.get( dip_font_height );
     info.text.color = color;
-    info.text.position = pixel_position;
-    info.text.rect_size = pixel_rect;
+    info.text.position = position;
+    info.text.rect_size = rect;
     info.text.hor_center = hor_center;
     info.text.ver_center = ver_center;
     info.text.data.resize( text.size() );

@@ -84,12 +84,12 @@ Renderer::Renderer( Game& game )
         { "KL_Block", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
-    draw_sky_shaders = gpu.create_shaders( kl::read_file( "shaders/draw_sky.hlsl" ) );
-    draw_hit_block_shaders = gpu.create_shaders( kl::read_file( "shaders/draw_hit_block.hlsl" ) );
-    raster_shadow_shaders = gpu.create_shaders( kl::read_file( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
-    raster_chunk_shaders = gpu.create_shaders( kl::read_file( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
-    tracing_world_shaders = gpu.create_shaders( kl::read_file( "shaders/tracing_world.hlsl" ) );
-    portal_stencil_shaders = gpu.create_shaders( kl::read_file( "shaders/portal_stencil.hlsl" ) );
+    draw_sky_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_sky.hlsl" ) );
+    draw_hit_block_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_hit_block.hlsl" ) );
+    raster_shadow_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
+    raster_chunk_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
+    tracing_world_shaders = gpu.create_shaders( kl::read_file_string( "shaders/tracing_world.hlsl" ) );
+    portal_stencil_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portal_stencil.hlsl" ) );
 
     sky_mesh = gpu.create_cube_mesh( 1.0f );
     hit_block_mesh = gpu.create_vertex_buffer( {
