@@ -46,7 +46,7 @@ private:
 
         // logic
         auto& window = renderer.game.world.system.window;
-        const flt2 mouse_ndc = window.mouse_ndc_ar();
+        const flt2 mouse_ndc = window.mouse.ndc_pos_ar();
         if ( mouse_ndc.in_bounds( center - scale * 0.5f, center + scale * 0.5f ) )
         {
             background_color.xyz() *= 1.4f;
