@@ -77,20 +77,6 @@ Renderer::Renderer( Game& game )
     enabled_blend = gpu.create_blend_state( true );
     disabled_blend = gpu.create_blend_state( false );
 
-    std::vector<dx::LayoutDescriptor> chunk_input_layout = {
-        { "KL_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "KL_Texture", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "KL_Ambient", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "KL_Block", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-
-    draw_sky_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_sky.hlsl" ) );
-    draw_hit_block_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_hit_block.hlsl" ) );
-    raster_shadow_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
-    raster_chunk_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
-    tracing_world_shaders = gpu.create_shaders( kl::read_file_string( "shaders/tracing_world.hlsl" ) );
-    portal_stencil_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portal_stencil.hlsl" ) );
-
     sky_mesh = gpu.create_cube_mesh( 1.0f );
     hit_block_mesh = gpu.create_vertex_buffer( {
         { { 0.0f, 0.0f, 0.0f } },
@@ -118,6 +104,8 @@ Renderer::Renderer( Game& game )
     atlas_texture = gpu.create_texture( kl::Image( "textures/blocks.png" ) );
     atlas_shader_view = gpu.create_shader_view( atlas_texture, nullptr );
 
+    reload_shaders();
+
     window.on_resize.emplace_back( [this]( int2 size )
         {
             this->game.world.system.gpu.resize_internal( size, DXGI_FORMAT_D24_UNORM_S8_UINT );
@@ -130,14 +118,35 @@ Renderer::Renderer( Game& game )
 
 void Renderer::render()
 {
+    auto& window = game.world.system.window;
+    if ( window.keyboard.f5.pressed() )
+        reload_shaders();
     if ( game.render_mode == RenderMode::TRACING )
-    {
         render_tracing();
-    }
     else
-    {
         render_raster();
-    }
+}
+
+void Renderer::reload_shaders()
+{
+    auto& gpu = game.world.system.gpu;
+
+    const std::vector<dx::LayoutDescriptor> chunk_input_layout = {
+        { "KL_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "KL_Texture", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "KL_Ambient", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "KL_Block", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    draw_sky_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_sky.hlsl" ) );
+    draw_hit_block_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_hit_block.hlsl" ) );
+    raster_shadow_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
+    raster_chunk_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
+    tracing_world_shaders = gpu.create_shaders( kl::read_file_string( "shaders/tracing_world.hlsl" ) );
+    portal_stencil_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portal_stencil.hlsl" ) );
+
+    if constexpr ( kl::IS_DEBUG )
+        kl::print( "Shaders reloaded." );
 }
 
 void Renderer::render_raster()

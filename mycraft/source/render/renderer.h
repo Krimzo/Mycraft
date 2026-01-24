@@ -44,6 +44,8 @@ struct Renderer
     void render();
 
 private:
+    void reload_shaders();
+
     void render_raster();
     void render_tracing();
 
