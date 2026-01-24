@@ -12,6 +12,13 @@ Renderer::Renderer( Game& game )
     shadow_raster_descriptor.CullMode = D3D11_CULL_BACK;
     shadow_raster_descriptor.SlopeScaledDepthBias = 2.5f;
 
+    dx::RasterStateDescriptor portal_stencil_raster_descriptor{};
+    portal_stencil_raster_descriptor.FillMode = D3D11_FILL_SOLID;
+    portal_stencil_raster_descriptor.CullMode = D3D11_CULL_NONE;
+    portal_stencil_raster_descriptor.AntialiasedLineEnable = true;
+    portal_stencil_raster_descriptor.MultisampleEnable = true;
+    portal_stencil_raster_descriptor.DepthClipEnable = false;
+
     dx::RasterStateDescriptor ui_raster_descriptor{};
     ui_raster_descriptor.FillMode = D3D11_FILL_SOLID;
     ui_raster_descriptor.CullMode = D3D11_CULL_NONE;
@@ -22,6 +29,7 @@ Renderer::Renderer( Game& game )
     cull_raster = gpu.create_raster_state( false, true );
     no_cull_raster = gpu.create_raster_state( false, false );
     wireframe_raster = gpu.create_raster_state( true, true );
+    portal_stencil_raster = gpu.create_raster_state( &portal_stencil_raster_descriptor );
     ui_raster = gpu.create_raster_state( &ui_raster_descriptor );
 
     dx::DepthStateDescriptor write_depth_stencil_descriptor{};
@@ -221,7 +229,7 @@ void Renderer::draw_portals_stencil( kl::Camera const& camera )
 {
     auto& gpu = game.world.system.gpu;
 
-    gpu.bind_raster_state( cull_raster );
+    gpu.bind_raster_state( portal_stencil_raster );
 
     struct alignas( 16 ) CB
     {
@@ -291,7 +299,7 @@ void Renderer::draw_raster_shadows( kl::Camera const& camera )
     raster_shadow_shaders.upload( cb );
 
     mat4 inv_sun_mat = kl::inverse( cb.VP );
-    flt4 sun_pos = inv_sun_mat * flt4( 0.0f, 0.0f, -1.0f, 1.0f );
+    flt4 sun_pos = inv_sun_mat * flt4( 0.0f, 0.0f, 0.0f, 1.0f );
     sun_pos /= sun_pos.w;
 
     plane sun_plane;
@@ -398,7 +406,6 @@ void Renderer::draw_tracing_world( kl::Camera const& camera )
 
 mat4 Renderer::get_inv_shadow_cam( kl::Camera camera ) const
 {
-    camera.near_plane = 0.01f;
-    camera.far_plane = flt2( CHUNK_WIDTH ).length();
+    camera.far_plane *= .25f;
     return kl::inverse( camera.matrix() );
 }
