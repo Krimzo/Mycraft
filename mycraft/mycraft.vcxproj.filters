@@ -82,12 +82,12 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\draw_hit_block.hlsl" />
-    <None Include="shaders\draw_sky.hlsl" />
-    <None Include="shaders\draw_ui.hlsl" />
+    <None Include="shaders\hit_block.hlsl" />
+    <None Include="shaders\sky.hlsl" />
+    <None Include="shaders\ui.hlsl" />
     <None Include="shaders\raster_chunks.hlsl" />
     <None Include="shaders\raster_shadows.hlsl" />
-    <None Include="shaders\tracing_world.hlsl" />
-    <None Include="shaders\portal_stencil.hlsl" />
+    <None Include="shaders\tracing_chunks.hlsl" />
+    <None Include="shaders\portal_indices.hlsl" />
   </ItemGroup>
 </Project>

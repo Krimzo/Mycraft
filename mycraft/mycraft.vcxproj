@@ -108,13 +108,13 @@
     <ClInclude Include="source\world\world.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\draw_hit_block.hlsl">
+    <None Include="shaders\hit_block.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="shaders\draw_sky.hlsl">
+    <None Include="shaders\sky.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="shaders\draw_ui.hlsl">
+    <None Include="shaders\ui.hlsl">
       <FileType>Document</FileType>
     </None>
     <None Include="shaders\raster_chunks.hlsl">
@@ -123,12 +123,12 @@
     <None Include="shaders\raster_shadows.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="shaders\tracing_world.hlsl">
+    <None Include="shaders\tracing_chunks.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\portal_stencil.hlsl">
+    <None Include="shaders\portal_indices.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

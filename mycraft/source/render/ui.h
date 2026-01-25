@@ -17,15 +17,18 @@ struct UIMesh
 
 struct UI
 {
-    Renderer const& renderer;
+    Renderer& renderer;
 
-    UI( Renderer const& renderer );
+    UI( Renderer& renderer );
 
     void update();
 
 private:
-    kl::Shaders m_shaders;
     UIProduct m_product;
+    dx::RasterState m_raster_state;
+    dx::DepthState m_depth_state;
+    dx::BlendState m_blend_state;
+    kl::Shaders m_shaders;
     UIMesh m_mesh;
 
     void reload();

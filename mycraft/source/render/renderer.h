@@ -7,30 +7,22 @@ struct Renderer
 {
     Game& game;
 
-    dx::RasterState shadow_raster;
-    dx::RasterState cull_raster;
-    dx::RasterState no_cull_raster;
-    dx::RasterState wireframe_raster;
-    dx::RasterState portal_stencil_raster;
-    dx::RasterState ui_raster;
+    dx::RasterState portal_indices_raster;
+    dx::RasterState sky_raster;
+    dx::RasterState raster_shadows_raster;
+    dx::RasterState raster_chunks_raster;
+    dx::RasterState hit_block_raster;
+    dx::RasterState tracing_chunks_raster;
 
-    dx::DepthState enabled_depth;
-    dx::DepthState disabled_depth;
-    dx::DepthState write_stencil;
-    dx::DepthState compare_stencil;
+    dx::DepthState portal_indices_depth;
+    dx::DepthState sky_depth;
+    dx::DepthState raster_shadows_depth;
+    dx::DepthState raster_chunks_depth;
+    dx::DepthState hit_block_depth;
+    dx::DepthState tracing_chunks_depth;
 
     dx::SamplerState shadow_sampler;
     dx::SamplerState atlas_sampler;
-
-    dx::BlendState enabled_blend;
-    dx::BlendState disabled_blend;
-
-    kl::Shaders draw_sky_shaders;
-    kl::Shaders draw_hit_block_shaders;
-    kl::Shaders raster_shadow_shaders;
-    kl::Shaders raster_chunk_shaders;
-    kl::Shaders tracing_world_shaders;
-    kl::Shaders portal_stencil_shaders;
 
     dx::Buffer sky_mesh;
     dx::Buffer hit_block_mesh;
@@ -40,23 +32,38 @@ struct Renderer
     dx::Texture atlas_texture;
     dx::ShaderView atlas_shader_view;
 
+    kl::Shaders portal_indices_shaders;
+    kl::Shaders sky_shaders;
+    kl::Shaders raster_shadows_shaders;
+    kl::Shaders raster_chunks_shaders;
+    kl::Shaders hit_block_shaders;
+    kl::Shaders tracing_chunks_shaders;
+
     Renderer( Game& game );
+
+    void reload_raster_states();
+    void reload_depth_states();
+    void reload_sampler_states();
+    void reload_meshes();
+    void reload_textures();
+    void reload_shaders();
+
+    bool is_wireframe() const;
+    void set_wireframe( bool enabled );
 
     void render();
 
 private:
-    void reload_shaders();
-
-    void render_raster();
-    void render_tracing();
-
+    void render_raster( kl::Camera const& camera );
+    void draw_portal_indices( kl::Camera const& camera );
     void draw_sky( kl::Camera const& camera );
-    void draw_hit_block( kl::Camera const& camera );
-    void draw_portals_stencil( kl::Camera const& camera );
-    void draw_portals( kl::Camera const& camera );
     void draw_raster_shadows( kl::Camera const& camera );
     void draw_raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref );
-    void draw_tracing_world( kl::Camera const& camera );
+    void draw_hit_block( kl::Camera const& camera );
+    void draw_portals( kl::Camera const& camera );
+
+    void render_tracing( kl::Camera const& camera );
+    void draw_tracing_chunks( kl::Camera const& camera );
 
     mat4 get_inv_shadow_cam( kl::Camera camera ) const;
 };

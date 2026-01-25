@@ -35,19 +35,31 @@ void UIMesh::upload( UIPoint const* data, UINT count )
         kl::print( "Created UIMesh buffer: ", count, " UIPoint-s (", count * sizeof( UIPoint ), " bytes)" );
 }
 
-UI::UI( Renderer const& renderer )
+UI::UI( Renderer& renderer )
     : renderer( renderer )
     , m_product( renderer )
     , m_mesh( renderer.game.world.system.gpu )
 {
     auto& gpu = renderer.game.world.system.gpu;
+
+    dx::RasterStateDescriptor raster_descriptor{};
+    raster_descriptor.FillMode = D3D11_FILL_SOLID;
+    raster_descriptor.CullMode = D3D11_CULL_NONE;
+    raster_descriptor.AntialiasedLineEnable = true;
+    raster_descriptor.MultisampleEnable = true;
+    m_raster_state = gpu.create_raster_state( &raster_descriptor );
+
+    m_depth_state = gpu.create_depth_state( false );
+
+    m_blend_state = gpu.create_blend_state( true );
+
     std::vector<dx::LayoutDescriptor> ui_input_layout = {
         { "KL_Position", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Blend", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    m_shaders = gpu.create_shaders( kl::read_file_string( "shaders/draw_ui.hlsl" ), ui_input_layout );
+    m_shaders = gpu.create_shaders( kl::read_file_string( "shaders/ui.hlsl" ), ui_input_layout );
 }
 
 void UI::update()
@@ -75,9 +87,9 @@ void UI::draw()
     if ( !m_mesh.buffer || m_mesh.point_count == 0 )
         return;
 
-    gpu.bind_raster_state( renderer.ui_raster );
-    gpu.bind_depth_state( renderer.disabled_depth );
-    gpu.bind_blend_state( renderer.enabled_blend );
+    gpu.bind_raster_state( m_raster_state );
+    gpu.bind_depth_state( m_depth_state );
+    gpu.bind_blend_state( m_blend_state );
 
     gpu.bind_sampler_state_for_pixel_shader( renderer.atlas_sampler, 0 );
     gpu.bind_shader_view_for_pixel_shader( renderer.atlas_shader_view, 0 );
@@ -123,6 +135,7 @@ void UI::reload_state_main_menu()
 
 void UI::reload_state_exit()
 {
+    //
 }
 
 void UI::reload_crosshair()
@@ -195,8 +208,9 @@ void UI::reload_main_menu()
     if ( ui_button( "V-SYNC", { 0.0f, 0.2f }, { 0.5f, 0.1f }, game.world.system.vsync ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
         game.world.system.vsync = !game.world.system.vsync;
 
-    if ( ui_button( "WIREFRAME", { 0.0f, 0.05f }, { 0.5f, 0.1f }, game.world.system.wireframe ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
-        game.world.system.wireframe = !game.world.system.wireframe;
+    const bool is_wireframe = renderer.is_wireframe();
+    if ( ui_button( "WIREFRAME", { 0.0f, 0.05f }, { 0.5f, 0.1f }, is_wireframe ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
+        renderer.set_wireframe( !is_wireframe );
 
     if ( ui_button( "RAYTRACING", { 0.0f, -0.1f }, { 0.5f, 0.1f }, ( game.render_mode == RenderMode::TRACING ) ? ENABLED_COLOR : DISABLED_COLOR, DARK_TEXT_COLOR ) )
         game.render_mode = ( game.render_mode == RenderMode::TRACING ) ? RenderMode::RASTER : RenderMode::TRACING;
