@@ -1,7 +1,7 @@
 struct VS_OUT
 {
     float4 position : SV_Position;
-    float2 textur : VS_Texture;
+    float2 uv : VS_UV;
 };
 
 static const float PI = 3.1415926535897932384626433832795f;
@@ -14,9 +14,6 @@ static const float2 DEFINED_TEXTURES[4] =
 };
 
 float4x4 VP;
-float3 CAMERA_ORIGIN;
-float ELAPSED_TIME;
-float RENDER_DISTANCE;
 
 Texture2D ATLAS_TEXTURE : register(t0);
 
@@ -36,13 +33,13 @@ VS_OUT v_shader(float3 position : KL_Position, uint textur : KL_Texture, uint bl
 {
     VS_OUT data;
     data.position = mul(float4(position, 1.0f), VP);
-    data.textur = atlas_uv(block, textur);
+    data.uv = atlas_uv(block, textur);
     return data;
 }
 
 void p_shader(VS_OUT data)
 {
-    float alpha = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.textur).a;
+    float alpha = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.uv).a;
     if (alpha < 1.0f)
         discard;
 }

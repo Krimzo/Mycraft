@@ -1,7 +1,7 @@
 struct VS_OUT
 {
     float4 position : SV_Position;
-    float3 textur : VS_Texture;
+    float3 direction : VS_Direction;
 };
 
 static const float PI = 3.1415926535897932384626433832795f;
@@ -35,13 +35,13 @@ VS_OUT v_shader(float3 position : KL_Position)
 {
     VS_OUT data;
     data.position = mul(float4(position, 0.0f), VP).xyww;
-    data.textur = position;
+    data.direction = position;
     return data;
 }
 
 float4 p_shader(VS_OUT data) : SV_Target0
 {
-    float3 direction = normalize(data.textur);
+    float3 direction = normalize(data.direction);
     
     float3 sky_top_color = lerp(NIGHT_TOP_COLOR, DAY_TOP_COLOR, saturate(-SUN_DIRECTION.y));
     float3 sky_middle_color = lerp(NIGHT_MIDDLE_COLOR, DAY_MIDDLE_COLOR, saturate(-SUN_DIRECTION.y));

@@ -10,7 +10,6 @@ struct System
     kl::Timer timer;
 
     bool vsync = false;
-    bool wireframe = false;
 
     System( std::string_view const& title );
 

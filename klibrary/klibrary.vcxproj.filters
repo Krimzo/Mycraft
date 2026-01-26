@@ -255,6 +255,24 @@
     <ClInclude Include="source\window\window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\web\html\html.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\web\http\http_app.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\web\http\http_query.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\web\http\http_request.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\web\http\http_response.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\web\http\http_server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\klibrary.cpp">
@@ -393,6 +411,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\window\window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\html\html.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\http\http_app.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\http\http_query.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\http\http_request.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\http\http_response.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\web\http\http_server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

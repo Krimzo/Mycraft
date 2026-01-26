@@ -3,7 +3,8 @@
 
 Environment::Environment( kl::GPU& gpu )
     : sun( gpu, 4096 )
-{}
+{
+}
 
 std::optional<Block> Inventory::selected_item() const
 {
@@ -20,14 +21,20 @@ void Player::set_position( flt3 const& position )
     camera.position = position + flt3{ 0.0f, PLAYER_HEIGHT, 0.0f };
 }
 
+mat4 Portal::matrix() const
+{
+    static constexpr mat4 HALF_BOX_TRANSLATION = mat4::translation( flt3{ .5f } );
+    return mat4::translation( position ) * mat4::rotation( rotation ) * mat4::scaling( scale ) * HALF_BOX_TRANSLATION;
+}
+
 Game::Game( World& world )
     : world( world )
     , environment( world.system.gpu )
 {
-    auto& window = world.system.window;
-    window.mouse.set_position( window.frame_center() );
     player.camera.position = { 5.0f, 5.0f, 5.0f };
-    player.camera.set_forward( { 1.0f, -1.0f, 1.0f } );
+    player.camera.set_forward( { 0.0f, 0.0f, 1.0f } );
+    player.camera.field_of_view = 105.0f;
+    player.prev_cam_pos = player.camera.position;
 
     int counter = 0;
     for ( auto value : { Block::GRASS, Block::DIRT, Block::STONE, Block::COBBLE, Block::WOOD, Block::PLANKS, Block::COBWEB, Block::ROSE, Block::DANDELION } )
@@ -35,25 +42,27 @@ Game::Game( World& world )
         player.inventory.toolbar[counter] = value;
         counter += 1;
     }
+
+    Portal& portal_a = portals.emplace_back();
+    Portal& portal_b = portals.emplace_back();
+
+    portal_a.rotation = { 0.0f, -90.0f, 0.0f };
+    portal_a.position = { 10.0f, 10.0f, 1.0f };
+    portal_a.friend_portal = &portal_b;
+
+    portal_b.rotation = { 0.0f, 180.0f, 0.0f };
+    portal_b.position = { -9.0f, 3.0f, 23.0f };
+    portal_b.friend_portal = &portal_a;
 }
 
 void Game::update()
 {
-    float delta_t = world.system.timer.delta();
-    handle_mouse_input();
-    handle_keyboard_input();
-    if ( player.gamemode == GameMode::CREATIVE )
+    switch ( game_state )
     {
-        update_creative_movement( delta_t );
+    case GameState::PLAYING: update_state_playing(); break;
+    case GameState::MAIN_MENU: update_state_main_menu(); break;
+    case GameState::EXIT: update_state_exit(); break;
     }
-    else
-    {
-        update_survival_movement( delta_t );
-        update_velocity( delta_t );
-        update_collisions( delta_t );
-    }
-    update_time();
-    update_world();
 }
 
 float Game::current_daytime() const
@@ -67,10 +76,53 @@ float Game::max_view_distance() const
     static constexpr flt3 single_chunk{ CHUNK_WIDTH, 0.0f, CHUNK_WIDTH };
     flt3 center_point = world.center_chunk_pos().to_flt3() + single_chunk;
     flt3 first_point = world.first_chunk_pos().to_flt3();
-    return (first_point - center_point).length();
+    return ( first_point - center_point ).length();
 }
 
-void Game::handle_mouse_input()
+void Game::pause()
+{
+    auto& window = world.system.window;
+    auto& mouse = window.mouse;
+    auto& timer = world.system.timer;
+
+    game_state = GameState::MAIN_MENU;
+    timer.stop();
+    mouse.set_hidden( false );
+}
+
+void Game::resume()
+{
+    auto& window = world.system.window;
+    auto& mouse = window.mouse;
+    auto& timer = world.system.timer;
+
+    game_state = GameState::PLAYING;
+    mouse.set_hidden( true );
+    mouse.set_position( window.frame_center() );
+    timer.start();
+}
+
+void Game::update_state_playing()
+{
+    float delta_t = world.system.timer.delta();
+    state_playing_update_mouse_input();
+    state_playing_update_keyboard_input();
+    if ( player.gamemode == GameMode::CREATIVE )
+    {
+        state_playing_update_creative_movement( delta_t );
+    }
+    else
+    {
+        state_playing_update_survival_movement( delta_t );
+        state_playing_update_survival_velocity( delta_t );
+        state_playing_update_survival_collisions( delta_t );
+    }
+    state_playing_update_portals();
+    state_playing_update_time();
+    state_playing_update_world();
+}
+
+void Game::state_playing_update_mouse_input()
 {
     auto& window = world.system.window;
 
@@ -132,106 +184,65 @@ void Game::handle_mouse_input()
     }
 }
 
-void Game::handle_keyboard_input()
+void Game::state_playing_update_keyboard_input()
 {
     auto& window = world.system.window;
+    auto& keyboard = window.keyboard;
+    auto& mouse = window.mouse;
     auto& gpu = world.system.gpu;
+    auto& timer = world.system.timer;
 
-    if ( window.keyboard.esc.pressed() )
+    if ( keyboard.esc.pressed() )
     {
-        window.close();
+        pause();
     }
-    if ( window.keyboard.f11.pressed() )
+    if ( keyboard.f11.pressed() )
     {
-        bool new_state = !window.fullscreened();
-        window.set_fullscreen( new_state );
-        gpu.set_fullscreen( new_state );
-    }
-    if ( window.keyboard.comma.pressed() )
-    {
-        world.system.vsync = !world.system.vsync;
-    }
-    if ( window.keyboard.period.pressed() )
-    {
-        world.system.wireframe = !world.system.wireframe;
-    }
-    if ( window.keyboard.divide.pressed() )
-    {
-        render_mode = render_mode == RenderMode::RASTER ? RenderMode::TRACING : RenderMode::RASTER;
-    }
-    if ( window.keyboard.plus.pressed() )
-    {
-        int ren_dist = world.render_distance() + 1;
-        ren_dist = kl::clamp( ren_dist, 1, 16 );
-        world.set_render_distance( ren_dist );
-    }
-    if ( window.keyboard.minus.pressed() )
-    {
-        int ren_dist = world.render_distance() - 1;
-        ren_dist = kl::clamp( ren_dist, 1, 16 );
-        world.set_render_distance( ren_dist );
+        gpu.set_fullscreen( !gpu.fullscreened() );
     }
 
-    if ( window.keyboard.one.pressed() )
+    if ( keyboard.one.pressed() )
     {
         player.inventory.selected_slot = 0;
     }
-    if ( window.keyboard.two.pressed() )
+    if ( keyboard.two.pressed() )
     {
         player.inventory.selected_slot = 1;
     }
-    if ( window.keyboard.three.pressed() )
+    if ( keyboard.three.pressed() )
     {
         player.inventory.selected_slot = 2;
     }
-    if ( window.keyboard.four.pressed() )
+    if ( keyboard.four.pressed() )
     {
         player.inventory.selected_slot = 3;
     }
-    if ( window.keyboard.five.pressed() )
+    if ( keyboard.five.pressed() )
     {
         player.inventory.selected_slot = 4;
     }
-    if ( window.keyboard.six.pressed() )
+    if ( keyboard.six.pressed() )
     {
         player.inventory.selected_slot = 5;
     }
-    if ( window.keyboard.seven.pressed() )
+    if ( keyboard.seven.pressed() )
     {
         player.inventory.selected_slot = 6;
     }
-    if ( window.keyboard.eight.pressed() )
+    if ( keyboard.eight.pressed() )
     {
         player.inventory.selected_slot = 7;
     }
-    if ( window.keyboard.nine.pressed() )
+    if ( keyboard.nine.pressed() )
     {
         player.inventory.selected_slot = 8;
     }
 }
 
-void Game::update_time()
+void Game::state_playing_update_creative_movement( float delta_t )
 {
-    static constexpr flt3 sun_start{ -0.666f, -0.666f, 0.333f };
-    float time = current_daytime();
-    flt3 direction;
-    direction.x = sin( time * 2.0f * kl::pi() / environment.day_duration );
-    direction.y = cos( time * 2.0f * kl::pi() / environment.day_duration );
-    direction.z = -(1.0f / 2.5f) * sin( time * 2.0f * kl::pi() / environment.day_duration );
-    environment.sun.set_direction( direction );
-}
-
-void Game::update_world()
-{
-    player.camera.far_plane = max_view_distance();
-    world.set_world_center( player.camera.position );
-    hit_block = world.cast_ray( player.camera.ray() );
-}
-
-void Game::update_creative_movement( float delta_t )
-{
-    auto& window = world.system.window;
-    if ( window.keyboard.shift )
+    auto& keyboard = world.system.window.keyboard;
+    if ( keyboard.shift )
     {
         player.camera.speed = Player::CAMERA_SPEED * 2.0f;
     }
@@ -239,77 +250,77 @@ void Game::update_creative_movement( float delta_t )
     {
         player.camera.speed = Player::CAMERA_SPEED;
     }
-    if ( window.keyboard.w )
+    if ( keyboard.w )
     {
         player.camera.move_forward( delta_t );
     }
-    if ( window.keyboard.s )
+    if ( keyboard.s )
     {
         player.camera.move_back( delta_t );
     }
-    if ( window.keyboard.d )
+    if ( keyboard.d )
     {
         player.camera.move_right( delta_t );
     }
-    if ( window.keyboard.a )
+    if ( keyboard.a )
     {
         player.camera.move_left( delta_t );
     }
-    if ( window.keyboard.c )
+    if ( keyboard.q )
     {
         player.camera.move_down( delta_t );
     }
-    if ( window.keyboard.space )
+    if ( keyboard.e )
     {
         player.camera.move_up( delta_t );
     }
 }
 
-void Game::update_survival_movement( float delta_t )
+void Game::state_playing_update_survival_movement( float delta_t )
 {
-    auto& window = world.system.window;
+    auto& keyboard = world.system.window.keyboard;
 
     flt3 forward = player.camera.forward();
     flt3 right = player.camera.right();
     float speed = player.walk_speed;
-    if ( window.keyboard.shift )
+    if ( keyboard.shift )
     {
         speed *= 2.0f;
     }
 
-    if ( window.keyboard.w )
+    if ( keyboard.w )
     {
         player.camera.position.x += forward.x * speed * delta_t;
         player.camera.position.z += forward.z * speed * delta_t;
     }
-    if ( window.keyboard.s )
+    if ( keyboard.s )
     {
         player.camera.position.x -= forward.x * speed * delta_t;
         player.camera.position.z -= forward.z * speed * delta_t;
     }
-    if ( window.keyboard.d )
+    if ( keyboard.d )
     {
         player.camera.position.x += right.x * speed * delta_t;
         player.camera.position.z += right.z * speed * delta_t;
     }
-    if ( window.keyboard.a )
+    if ( keyboard.a )
     {
         player.camera.position.x -= right.x * speed * delta_t;
         player.camera.position.z -= right.z * speed * delta_t;
     }
-    if ( window.keyboard.space.pressed() )
+    if ( keyboard.space.pressed() )
     {
         player.velocity.y = player.jump_speed;
     }
 }
 
-void Game::update_velocity( float delta_t )
+void Game::state_playing_update_survival_velocity( float delta_t )
 {
     player.velocity.y += environment.gravity * delta_t;
     player.camera.position += player.velocity * delta_t;
 }
 
-void Game::update_collisions( float delta_t )
+void Game::state_playing_update_survival_collisions( float delta_t )
 {
     flt3 player_pos = player.position();
     Block* block = world.get_world_block( BlockPosition::from_flt3( player_pos ) );
@@ -319,4 +330,81 @@ void Game::update_collisions( float delta_t )
         player.set_position( player_pos );
         player.velocity = {};
     }
+}
+
+void Game::state_playing_update_portals()
+{
+    static constexpr aabb PORTAL_OBJ_AABB = { flt3{ 0.0f }, flt3{ 0.5f } };
+    static constexpr float MOVE_BIAS = 0.01f;
+    if ( player.camera.position == player.prev_cam_pos )
+        return;
+    for ( auto& portal : portals )
+    {
+        const mat4 inv_obj_mat = kl::inverse( portal.matrix() );
+        const flt3 obj_player_pos = ( inv_obj_mat * flt4( player.camera.position, 1.0f ) ).xyz();
+        const flt3 obj_prev_cam_pos = ( inv_obj_mat * flt4( player.prev_cam_pos, 1.0f ) ).xyz();
+        ray obj_ray = { obj_prev_cam_pos, obj_player_pos - obj_prev_cam_pos };
+        flt3 intersection;
+        if ( !obj_ray.intersect_aabb( PORTAL_OBJ_AABB, &intersection ) )
+            continue;
+        if ( ( intersection - obj_prev_cam_pos ).length() > ( obj_player_pos - obj_prev_cam_pos ).length() )
+            continue;
+        obj_ray.origin += obj_ray.direction() * ( ( intersection - obj_ray.origin ).length() + kl::sqrt( 3.0f ) );
+        obj_ray.set_direction( -obj_ray.direction() );
+        if ( !obj_ray.intersect_aabb( PORTAL_OBJ_AABB, &intersection ) )
+            continue;
+        intersection -= obj_ray.direction() * MOVE_BIAS;
+        const mat4 friend_mat = portal.friend_portal->matrix();
+        const flt3 inv_player_forward = ( inv_obj_mat * flt4( player.camera.forward(), 0.0f ) ).xyz();
+        player.camera.position = ( friend_mat * flt4( intersection, 1.0f ) ).xyz();
+        player.camera.set_forward( ( friend_mat * flt4( inv_player_forward, 0.0f ) ).xyz() );
+        break;
+    }
+    player.prev_cam_pos = player.camera.position;
+}
+
+void Game::state_playing_update_time()
+{
+    static constexpr flt3 sun_start{ -0.666f, -0.666f, 0.333f };
+    float time = current_daytime();
+    flt3 direction;
+    direction.x = sin( time * 2.0f * kl::pi() / environment.day_duration );
+    direction.y = cos( time * 2.0f * kl::pi() / environment.day_duration );
+    direction.z = -( 1.0f / 2.5f ) * sin( time * 2.0f * kl::pi() / environment.day_duration );
+    environment.sun.set_direction( direction );
+}
+
+void Game::state_playing_update_world()
+{
+    player.camera.far_plane = max_view_distance();
+    world.set_world_center( player.camera.position );
+    hit_block = world.cast_ray( player.camera.ray() );
+}
+
+void Game::update_state_main_menu()
+{
+    state_main_menu_update_keyboard_input();
+}
+
+void Game::state_main_menu_update_keyboard_input()
+{
+    auto& window = world.system.window;
+    auto& keyboard = window.keyboard;
+    auto& mouse = window.mouse;
+    auto& gpu = world.system.gpu;
+    auto& timer = world.system.timer;
+
+    if ( keyboard.esc.pressed() )
+    {
+        resume();
+    }
+    if ( keyboard.f11.pressed() )
+    {
+        gpu.set_fullscreen( !gpu.fullscreened() );
+    }
+}
+
+void Game::update_state_exit()
+{
+    world.system.window.close();
 }

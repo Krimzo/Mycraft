@@ -31,7 +31,7 @@ void World::set_world_center( flt3 world_center )
     ChunkPosition new_chunk_pos = center_chunk_pos();
     if ( new_chunk_pos != old_chunk_pos )
     {
-        ChunkIndex index_delta = (new_chunk_pos - old_chunk_pos).to_index();
+        ChunkIndex index_delta = ( new_chunk_pos - old_chunk_pos ).to_index();
         regenerate_with_swap( index_delta );
     }
 }
@@ -64,7 +64,7 @@ BlockPosition World::get_block_world( ChunkIndex chunk_ind, BlockIndex block_ind
 Block* World::get_world_block( BlockPosition const& block_pos )
 {
     ChunkPosition chunk_pos = ChunkPosition::from_flt3( block_pos.to_flt3() );
-    ChunkIndex chunk_ind = (chunk_pos - first_chunk_pos()).to_index();
+    ChunkIndex chunk_ind = ( chunk_pos - first_chunk_pos() ).to_index();
     if ( !chunk_ind.is_valid( width_chunks() ) )
         return nullptr;
 
@@ -154,8 +154,8 @@ std::optional<HitPayload> World::cast_ray( ray const& ray, float reach )
         ChunkPosition chunk_pos = first_chunk_pos() + ChunkPosition::from_index( chunk_ind );
 
         aabb box;
-        box.size = CHUNK_HALF;
-        box.position = chunk_pos.to_flt3() + box.size;
+        box.half_size = CHUNK_HALF;
+        box.center = chunk_pos.to_flt3() + box.half_size;
 
         if ( ray.intersect_aabb( box, nullptr ) )
         {
@@ -175,13 +175,13 @@ std::optional<HitPayload> World::cast_ray( ray const& ray, float reach )
                 continue;
 
             aabb box;
-            box.size = flt3{ 0.5f };
-            box.position = hit_chunk.chunk_pos.to_flt3() + block_ind.to_flt3() + box.size;
+            box.half_size = flt3{ 0.5f };
+            box.center = hit_chunk.chunk_pos.to_flt3() + block_ind.to_flt3() + box.half_size;
 
             flt3 inters;
             if ( ray.intersect_aabb( box, &inters ) )
             {
-                float hit_distance = (inters - ray.origin).length();
+                float hit_distance = ( inters - ray.origin ).length();
                 if ( hit_distance < min_hit_dist )
                 {
                     min_hit_dist = hit_distance;
@@ -189,7 +189,7 @@ std::optional<HitPayload> World::cast_ray( ray const& ray, float reach )
                     HitPayload payload{};
                     payload.chunk_ind = hit_chunk.chunk_ind;
                     payload.block_ind = block_ind;
-                    payload.normal = kl::normalize( inters - box.position );
+                    payload.normal = kl::normalize( inters - box.center );
                     result = payload;
                 }
             }
@@ -220,7 +220,7 @@ void World::adjust_by_normal( HitPayload& payload ) const
 
     BlockPosition block_pos = get_block_world( payload.chunk_ind, payload.block_ind ) + dir;
     ChunkPosition chunk_pos = ChunkPosition::from_flt3( block_pos.to_flt3() );
-    payload.chunk_ind = (chunk_pos - first_chunk_pos()).to_index();
+    payload.chunk_ind = ( chunk_pos - first_chunk_pos() ).to_index();
     payload.block_ind = block_pos.to_index( chunk_pos );
 }
 
@@ -250,18 +250,18 @@ bool World::chunk_visible( plane const& plane, int i ) const
 void World::regenerate_all()
 {
     auto get_chunk_pos = [this]( int i )
-    {
-        ChunkIndex chunk_ind = ChunkIndex::from_int( i, width_chunks() );
-        return first_chunk_pos() + ChunkPosition::from_index( chunk_ind );
-    };
+        {
+            ChunkIndex chunk_ind = ChunkIndex::from_int( i, width_chunks() );
+            return first_chunk_pos() + ChunkPosition::from_index( chunk_ind );
+        };
     kl::async_for( 0, chunk_count(), [&]( int i )
-    {
-        generator.generate_chunk_cached( get_chunk_pos( i ), get_chunk( i ) );
-    } );
+        {
+            generator.generate_chunk_cached( get_chunk_pos( i ), get_chunk( i ) );
+        } );
     kl::async_for( 0, chunk_count(), [&]( int i )
-    {
-        get_chunk( i ).upload( get_chunk_pos( i ), system.gpu, get_block_test() );
-    } );
+        {
+            get_chunk( i ).upload( get_chunk_pos( i ), system.gpu, get_block_test() );
+        } );
     upload_tracing();
 }
 
@@ -269,30 +269,30 @@ void World::regenerate_with_swap( ChunkIndex index_delta )
 {
     m_copy_chunks = m_chunks;
     kl::async_for( 0, chunk_count(), [&]( int i )
-    {
-        ChunkIndex chunk_ind = ChunkIndex::from_int( i, width_chunks() );
-        ChunkIndex src_chunk_ind = chunk_ind + index_delta;
-        if ( src_chunk_ind.is_valid( width_chunks() ) )
         {
-            int src_i = src_chunk_ind.to_int( width_chunks() );
-            m_chunks[i] = m_copy_chunks[src_i];
-        }
-        else
-        {
-            ChunkPosition chunk_pos = first_chunk_pos() + ChunkPosition::from_index( chunk_ind );
-            auto& chunk = get_chunk( i );
-            generator.generate_chunk_cached( chunk_pos, chunk );
-            chunk.upload( chunk_pos, system.gpu, get_block_test() );
-        }
-    } );
+            ChunkIndex chunk_ind = ChunkIndex::from_int( i, width_chunks() );
+            ChunkIndex src_chunk_ind = chunk_ind + index_delta;
+            if ( src_chunk_ind.is_valid( width_chunks() ) )
+            {
+                int src_i = src_chunk_ind.to_int( width_chunks() );
+                m_chunks[i] = m_copy_chunks[src_i];
+            }
+            else
+            {
+                ChunkPosition chunk_pos = first_chunk_pos() + ChunkPosition::from_index( chunk_ind );
+                auto& chunk = get_chunk( i );
+                generator.generate_chunk_cached( chunk_pos, chunk );
+                chunk.upload( chunk_pos, system.gpu, get_block_test() );
+            }
+        } );
     upload_tracing();
 }
 
 BlockTest World::get_block_test()
 {
     return [this]( BlockPosition const& block_pos ) -> bool
-    {
-        Block* block = get_world_block( block_pos );
-        return block && is_block_solid( *block );
-    };
+        {
+            Block* block = get_world_block( block_pos );
+            return block && is_block_solid( *block );
+        };
 }

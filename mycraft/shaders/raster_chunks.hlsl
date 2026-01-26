@@ -2,7 +2,7 @@ struct VS_OUT
 {
     float3 world : VS_World;
     float4 position : SV_Position;
-    float2 textur : VS_Texture;
+    float2 uv : VS_UV;
     float ambient : VS_Ambient;
     float4 sun : VS_Sun;
 };
@@ -23,6 +23,9 @@ float ELAPSED_TIME;
 float3 SUN_DIRECTION;
 float RENDER_DISTANCE;
 float2 SHADOW_TEXEL_SIZE;
+float ENABLE_CLIPPING_PLANE;
+float3 CLIPPING_PLANE_POSITION;
+float3 CLIPPING_PLANE_NORMAL;
 
 Texture2D SHADOW_TEXTURE : register(t0);
 Texture2D ATLAS_TEXTURE : register(t1);
@@ -40,8 +43,14 @@ float2 atlas_uv(uint block, uint textur)
     return (DEFINED_TEXTURES[textur] + atlas_pos(block)) * (1.0f / 16.0f);
 }
 
-float get_pcf_shadow(float3 light_coords, int half_kernel_size)
+float get_pcf_shadow(float3 sun_ndc_coords, int half_kernel_size)
 {
+    const float3 light_uvw_coords =
+    {
+        sun_ndc_coords.x * 0.5f + 0.5f,
+        sun_ndc_coords.y * -0.5f + 0.5f,
+        sun_ndc_coords.z,
+    };
     float shadow_factor = 0.0f;
     [unroll]
     for (int y = -half_kernel_size; y <= half_kernel_size; y++)
@@ -49,10 +58,9 @@ float get_pcf_shadow(float3 light_coords, int half_kernel_size)
         [unroll]
         for (int x = -half_kernel_size; x <= half_kernel_size; x++)
         {
-            float2 kernel_coords = float2(x, y) + 0.25f;
-            float2 altered_coords = light_coords.xy + kernel_coords * SHADOW_TEXEL_SIZE;
+            float2 altered_coords = light_uvw_coords.xy + SHADOW_TEXEL_SIZE * float2(x, y);
             float shadow_depth = SHADOW_TEXTURE.Sample(SHADOW_SAMPLER, altered_coords).r;
-            shadow_factor += (light_coords.z <= shadow_depth) ? 0.0f : 1.0f;
+            shadow_factor += (light_uvw_coords.z > shadow_depth) ? 1.0f : 0.0f;
         }
     }
     return shadow_factor / ((half_kernel_size * 2 + 1) * (half_kernel_size * 2 + 1));
@@ -63,19 +71,23 @@ VS_OUT v_shader(float3 position : KL_Position, uint textur : KL_Texture, uint am
     VS_OUT data;
     data.world = position;
     data.position = mul(float4(data.world, 1.0f), VP);
-    data.textur = atlas_uv(block, textur);
+    data.uv = atlas_uv(block, textur);
     data.ambient = ambient * (AMBIENT_FACTOR / 255.0f);
-    
     data.sun = mul(float4(position, 1.0f), SUN_VP);
-    data.sun.xy *= float2(0.5f, -0.5f);
-    data.sun.xy += 0.5f;
-    
     return data;
 }
 
 float4 p_shader(VS_OUT data) : SV_Target0
 {
-    float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.textur);
+    if (ENABLE_CLIPPING_PLANE)
+    {
+        float3 plane_to_world = normalize(data.world - CLIPPING_PLANE_POSITION);
+        float plane_world_dot = dot(plane_to_world, CLIPPING_PLANE_NORMAL);
+        if (plane_world_dot < 0.0f)
+            discard;
+    }
+    
+    float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.uv);
     if (color.a < 1.0f)
         discard;
     

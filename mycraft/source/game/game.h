@@ -44,6 +44,7 @@ struct Player
 
     kl::Camera camera;
     flt3 velocity;
+    flt3 prev_cam_pos;
 
     float jump_speed = 5.0f;
     float walk_speed = 2.5f;
@@ -55,16 +56,35 @@ struct Player
     void set_position( flt3 const& position );
 };
 
+struct Portal
+{
+    Portal* friend_portal = nullptr;
+    flt3 scale = { 2.0f, 3.0f, 0.001f };
+    flt3 rotation;
+    flt3 position;
+
+    mat4 matrix() const;
+};
+
+enum struct GameState
+{
+    PLAYING = 0,
+    MAIN_MENU,
+    EXIT,
+};
+
 struct Game
 {
     static constexpr float TRANSITION_DURATION = 2.0f;
     static constexpr float RETURN_DURATION = 2.0f;
 
+    GameState game_state = GameState::PLAYING;
     RenderMode render_mode = RenderMode::RASTER;
 
     World& world;
     Environment environment;
     Player player;
+    std::list<Portal> portals;
 
     std::optional<HitPayload> hit_block;
 
@@ -75,15 +95,26 @@ struct Game
     float current_daytime() const;
     float max_view_distance() const;
 
+    void pause();
+    void resume();
+
 private:
-    void handle_mouse_input();
-    void handle_keyboard_input();
+    // PLAYING
+    void update_state_playing();
+    void state_playing_update_mouse_input();
+    void state_playing_update_keyboard_input();
+    void state_playing_update_creative_movement( float delta_t );
+    void state_playing_update_survival_movement( float delta_t );
+    void state_playing_update_survival_velocity( float delta_t );
+    void state_playing_update_survival_collisions( float delta_t );
+    void state_playing_update_portals();
+    void state_playing_update_time();
+    void state_playing_update_world();
 
-    void update_time();
-    void update_world();
+    // MAIN_MENU
+    void update_state_main_menu();
+    void state_main_menu_update_keyboard_input();
 
-    void update_creative_movement( float delta_t );
-    void update_survival_movement( float delta_t );
-    void update_velocity( float delta_t );
-    void update_collisions( float delta_t );
+    // EXIT
+    void update_state_exit();
 };
