@@ -1,5 +1,6 @@
 #include "render/renderer.h"
 
+static constexpr UINT8 DEFAULT_STENCIL_VALUE = 0xFF;
 
 Renderer::Renderer( Game& game )
     : game( game )
@@ -31,23 +32,23 @@ void Renderer::reload_raster_states()
 {
     auto& gpu = game.world.system.gpu;
 
-    dx::RasterStateDescriptor portal_indices_raster_descriptor{};
-    portal_indices_raster_descriptor.FillMode = D3D11_FILL_SOLID;
-    portal_indices_raster_descriptor.CullMode = D3D11_CULL_NONE;
-    portal_indices_raster_descriptor.AntialiasedLineEnable = true;
-    portal_indices_raster_descriptor.MultisampleEnable = true;
-    portal_indices_raster_descriptor.DepthClipEnable = false;
-
     dx::RasterStateDescriptor raster_shadows_raster_descriptor{};
     raster_shadows_raster_descriptor.FillMode = D3D11_FILL_SOLID;
     raster_shadows_raster_descriptor.CullMode = D3D11_CULL_BACK;
     raster_shadows_raster_descriptor.SlopeScaledDepthBias = 2.5f;
 
-    portal_indices_raster = gpu.create_raster_state( &portal_indices_raster_descriptor );
+    dx::RasterStateDescriptor portals_raster_descriptor{};
+    portals_raster_descriptor.FillMode = D3D11_FILL_SOLID;
+    portals_raster_descriptor.CullMode = D3D11_CULL_NONE;
+    portals_raster_descriptor.AntialiasedLineEnable = true;
+    portals_raster_descriptor.MultisampleEnable = true;
+    portals_raster_descriptor.DepthClipEnable = false;
+
     sky_raster = gpu.create_raster_state( false, false );
     raster_shadows_raster = gpu.create_raster_state( &raster_shadows_raster_descriptor );
     raster_chunks_raster = gpu.create_raster_state( false, true );
     hit_block_raster = gpu.create_raster_state( false, true );
+    portals_raster = gpu.create_raster_state( &portals_raster_descriptor );
     tracing_chunks_raster = gpu.create_raster_state( false, false );
 }
 
@@ -55,43 +56,57 @@ void Renderer::reload_depth_states()
 {
     auto& gpu = game.world.system.gpu;
 
-    dx::DepthStateDescriptor portal_indices_depth_descriptor{};
-    portal_indices_depth_descriptor.DepthEnable = true;
-    portal_indices_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    portal_indices_depth_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
-    portal_indices_depth_descriptor.StencilEnable = true;
-    portal_indices_depth_descriptor.StencilReadMask = 0xFF;
-    portal_indices_depth_descriptor.StencilWriteMask = 0xFF;
-    portal_indices_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
-    portal_indices_depth_descriptor.BackFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
-    portal_indices_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    portal_indices_depth_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    portal_indices_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-    portal_indices_depth_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-    portal_indices_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-    portal_indices_depth_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+    dx::DepthStateDescriptor sky_depth_descriptor{};
+    sky_depth_descriptor.DepthEnable = false;
+    sky_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    sky_depth_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
+    sky_depth_descriptor.StencilEnable = true;
+    sky_depth_descriptor.StencilReadMask = 0xFF;
+    sky_depth_descriptor.StencilWriteMask = 0xFF;
+    sky_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    sky_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+    sky_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    sky_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    sky_depth_descriptor.BackFace = sky_depth_descriptor.FrontFace;
 
-    dx::DepthStateDescriptor raster_chunks_depth_descriptor{};
+    dx::DepthStateDescriptor raster_chunks_depth_descriptor = sky_depth_descriptor;
     raster_chunks_depth_descriptor.DepthEnable = true;
-    raster_chunks_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    raster_chunks_depth_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
-    raster_chunks_depth_descriptor.StencilEnable = true;
-    raster_chunks_depth_descriptor.StencilReadMask = 0xFF;
-    raster_chunks_depth_descriptor.StencilWriteMask = 0xFF;
-    raster_chunks_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    raster_chunks_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-    raster_chunks_depth_descriptor.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
 
-    portal_indices_depth = gpu.create_depth_state( &portal_indices_depth_descriptor );
-    sky_depth = gpu.create_depth_state( false );
+    dx::DepthStateDescriptor hit_block_depth_descriptor = sky_depth_descriptor;
+    hit_block_depth_descriptor.DepthEnable = true;
+
+    dx::DepthStateDescriptor portals_write_stencil_depth_descriptor{};
+    portals_write_stencil_depth_descriptor.DepthEnable = true;
+    portals_write_stencil_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    portals_write_stencil_depth_descriptor.DepthFunc = D3D11_COMPARISON_LESS;
+    portals_write_stencil_depth_descriptor.StencilEnable = true;
+    portals_write_stencil_depth_descriptor.StencilReadMask = 0xFF;
+    portals_write_stencil_depth_descriptor.StencilWriteMask = 0xFF;
+    portals_write_stencil_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    portals_write_stencil_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+    portals_write_stencil_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
+    portals_write_stencil_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+    portals_write_stencil_depth_descriptor.BackFace = portals_write_stencil_depth_descriptor.FrontFace;
+
+    dx::DepthStateDescriptor portals_write_depth_depth_descriptor{};
+    portals_write_depth_depth_descriptor.DepthEnable = true;
+    portals_write_depth_depth_descriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    portals_write_depth_depth_descriptor.DepthFunc = D3D11_COMPARISON_ALWAYS;
+    portals_write_depth_depth_descriptor.StencilEnable = true;
+    portals_write_depth_depth_descriptor.StencilReadMask = 0xFF;
+    portals_write_depth_depth_descriptor.StencilWriteMask = 0xFF;
+    portals_write_depth_depth_descriptor.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    portals_write_depth_depth_descriptor.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+    portals_write_depth_depth_descriptor.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    portals_write_depth_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    portals_write_depth_depth_descriptor.BackFace = portals_write_depth_depth_descriptor.FrontFace;
+
+    sky_depth = gpu.create_depth_state( &sky_depth_descriptor );
     raster_shadows_depth = gpu.create_depth_state( true );
     raster_chunks_depth = gpu.create_depth_state( &raster_chunks_depth_descriptor );
-    hit_block_depth = gpu.create_depth_state( true );
+    hit_block_depth = gpu.create_depth_state( &hit_block_depth_descriptor );
+    portals_write_stencil_depth = gpu.create_depth_state( &portals_write_stencil_depth_descriptor );
+    portals_write_depth_depth = gpu.create_depth_state( &portals_write_depth_depth_descriptor );
     tracing_chunks_depth = gpu.create_depth_state( false );
 }
 
@@ -161,11 +176,12 @@ void Renderer::reload_shaders()
         { "KL_Block", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
-    portal_indices_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portal_indices.hlsl" ) );
     sky_shaders = gpu.create_shaders( kl::read_file_string( "shaders/sky.hlsl" ) );
     raster_shadows_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
     raster_chunks_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
     hit_block_shaders = gpu.create_shaders( kl::read_file_string( "shaders/hit_block.hlsl" ) );
+    portals_write_stencil_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portals_write_stencil.hlsl" ) );
+    portals_write_depth_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portals_write_depth.hlsl" ) );
     tracing_chunks_shaders = gpu.create_shaders( kl::read_file_string( "shaders/tracing_chunks.hlsl" ) );
 
     if constexpr ( kl::IS_DEBUG )
@@ -204,44 +220,19 @@ void Renderer::render()
 
 void Renderer::render_raster( kl::Camera const& camera )
 {
-    draw_portal_indices( camera );
-    draw_sky( camera );
+    draw_sky( camera, DEFAULT_STENCIL_VALUE );
     draw_raster_shadows( camera );
-    draw_raster_chunks( camera, nullptr, true, 0xFF );
-    draw_hit_block( camera );
+    draw_raster_chunks( camera, nullptr, DEFAULT_STENCIL_VALUE );
+    draw_hit_block( camera, DEFAULT_STENCIL_VALUE );
     draw_portals( camera );
 }
 
-void Renderer::draw_portal_indices( kl::Camera const& camera )
-{
-    auto& gpu = game.world.system.gpu;
-
-    gpu.bind_raster_state( portal_indices_raster );
-
-    struct alignas( 16 ) CB
-    {
-        mat4 WVP;
-    } cb = {};
-
-    int portal_index = 0;
-    gpu.bind_shaders( portal_indices_shaders );
-    for ( auto& portal : game.portals )
-    {
-        gpu.bind_depth_state( portal_indices_depth, portal_index++ );
-
-        cb.WVP = camera.matrix() * portal.matrix();
-        portal_indices_shaders.upload( cb );
-
-        gpu.draw( portal_mesh );
-    }
-}
-
-void Renderer::draw_sky( kl::Camera const& camera )
+void Renderer::draw_sky( kl::Camera const& camera, UINT allowed_stencil )
 {
     auto& gpu = game.world.system.gpu;
 
     gpu.bind_raster_state( sky_raster );
-    gpu.bind_depth_state( sky_depth );
+    gpu.bind_depth_state( sky_depth, allowed_stencil );
 
     struct alignas( 16 ) CB
     {
@@ -298,12 +289,12 @@ void Renderer::draw_raster_shadows( kl::Camera const& camera )
     gpu.set_viewport_size( game.world.system.window.size() );
 }
 
-void Renderer::draw_raster_chunks( kl::Camera const& camera, plane const* clipping_plane, bool should_write_stencil, UINT stencil_ref )
+void Renderer::draw_raster_chunks( kl::Camera const& camera, plane const* clipping_plane, UINT allowed_stencil )
 {
     auto& gpu = game.world.system.gpu;
 
     gpu.bind_raster_state( raster_chunks_raster );
-    gpu.bind_depth_state( raster_chunks_depth, stencil_ref );
+    gpu.bind_depth_state( raster_chunks_depth, allowed_stencil );
 
     gpu.bind_shader_view_for_pixel_shader( game.environment.sun.shader_view( 0 ), 0 );
     gpu.bind_shader_view_for_pixel_shader( atlas_shader_view, 1 );
@@ -352,7 +343,7 @@ void Renderer::draw_raster_chunks( kl::Camera const& camera, plane const* clippi
     gpu.unbind_shader_view_for_pixel_shader( 0 );
 }
 
-void Renderer::draw_hit_block( kl::Camera const& camera )
+void Renderer::draw_hit_block( kl::Camera const& camera, UINT allowed_stencil )
 {
     auto& gpu = game.world.system.gpu;
 
@@ -364,7 +355,7 @@ void Renderer::draw_hit_block( kl::Camera const& camera )
     BlockPosition block_pos = game.world.get_block_world( payload.chunk_ind, payload.block_ind );
 
     gpu.bind_raster_state( hit_block_raster );
-    gpu.bind_depth_state( hit_block_depth );
+    gpu.bind_depth_state( hit_block_depth, allowed_stencil );
 
     struct alignas( 16 ) CB
     {
@@ -384,11 +375,15 @@ void Renderer::draw_portals( kl::Camera const& camera )
 {
     auto& gpu = game.world.system.gpu;
 
-    gpu.context()->ClearDepthStencilView( gpu.back_depth_view().get(), D3D11_CLEAR_DEPTH, 1.0f, 0xFF );
+    struct alignas( 16 ) CB
+    {
+        mat4 WVP;
+    } cb = {};
 
     int portal_index = 0;
     for ( auto& portal : game.portals )
     {
+        // prepare
         const flt3 friend_position = portal.friend_portal->position;
         const mat4 friend_matrix = portal.friend_portal->matrix();
         const mat4 relative_matrix = friend_matrix * kl::inverse( portal.matrix() );
@@ -396,22 +391,42 @@ void Renderer::draw_portals( kl::Camera const& camera )
         kl::Camera portal_camera = camera;
         portal_camera.position = ( relative_matrix * flt4( camera.position, 1.0f ) ).xyz();
         portal_camera.set_forward( ( relative_matrix * flt4( camera.forward(), 0.0f ) ).xyz() );
-        draw_raster_shadows( portal_camera );
 
         plane clipping_plane;
         clipping_plane.position = friend_position;
         clipping_plane.set_normal( ( friend_matrix * flt4( 0.0f, 0.0f, 1.0f, 0.0f ) ).xyz() );
         if ( clipping_plane.in_front( portal_camera.position ) )
             clipping_plane.set_normal( -clipping_plane.normal() );
-        draw_raster_chunks( portal_camera, &clipping_plane, false, portal_index++ );
+
+        gpu.bind_raster_state( portals_raster );
+        cb.WVP = camera.matrix() * portal.matrix();
+
+        // write stencil
+        gpu.bind_depth_state( portals_write_stencil_depth, portal_index );
+        portals_write_stencil_shaders.upload( cb );
+        gpu.bind_shaders( portals_write_stencil_shaders );
+        gpu.draw( portal_mesh );
+
+        // write depth
+        gpu.bind_depth_state( portals_write_depth_depth, portal_index );
+        portals_write_depth_shaders.upload( cb );
+        gpu.bind_shaders( portals_write_depth_shaders );
+        gpu.draw( portal_mesh );
+
+        // draw
+        draw_sky( portal_camera, portal_index );
+        draw_raster_shadows( portal_camera );
+        draw_raster_chunks( portal_camera, &clipping_plane, portal_index );
+
+        portal_index += 1;
     }
 }
 
 void Renderer::render_tracing( kl::Camera const& camera )
 {
-    draw_sky( camera );
+    draw_sky( camera, DEFAULT_STENCIL_VALUE );
     draw_tracing_chunks( camera );
-    draw_hit_block( camera );
+    draw_hit_block( camera, DEFAULT_STENCIL_VALUE );
 }
 
 void Renderer::draw_tracing_chunks( kl::Camera const& camera )

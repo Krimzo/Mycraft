@@ -88,6 +88,7 @@
     <None Include="shaders\raster_chunks.hlsl" />
     <None Include="shaders\raster_shadows.hlsl" />
     <None Include="shaders\tracing_chunks.hlsl" />
-    <None Include="shaders\portal_indices.hlsl" />
+    <None Include="shaders\portals_write_stencil.hlsl" />
+    <None Include="shaders\portals_write_depth.hlsl" />
   </ItemGroup>
 </Project>

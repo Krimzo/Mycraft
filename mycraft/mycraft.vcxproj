@@ -128,7 +128,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\portal_indices.hlsl">
+    <None Include="shaders\portals_write_stencil.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\portals_write_depth.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
