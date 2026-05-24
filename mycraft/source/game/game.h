@@ -7,6 +7,7 @@ enum RenderMode : uint8_t
 {
     RASTER = 0,
     TRACING,
+    PARTICLES,
 };
 
 enum GameMode : uint8_t
