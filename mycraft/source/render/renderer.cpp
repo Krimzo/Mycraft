@@ -1,6 +1,8 @@
 #include "render/renderer.h"
 
 static constexpr UINT8 DEFAULT_STENCIL_VALUE = 0xFF;
+static constexpr int PARTICLE_GENERATE_COUNT = 5'000'000;
+static constexpr float PARTICLE_GENERATE_HALF_BOX_SIZE = 35.0f;
 
 Renderer::Renderer( Game& game )
     : game( game )
@@ -50,6 +52,7 @@ void Renderer::reload_raster_states()
     hit_block_raster = gpu.create_raster_state( false, true );
     portals_raster = gpu.create_raster_state( &portals_raster_descriptor );
     tracing_chunks_raster = gpu.create_raster_state( false, false );
+    particles_raster = gpu.create_raster_state( false, false );
 }
 
 void Renderer::reload_depth_states()
@@ -101,6 +104,9 @@ void Renderer::reload_depth_states()
     portals_write_depth_depth_descriptor.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     portals_write_depth_depth_descriptor.BackFace = portals_write_depth_depth_descriptor.FrontFace;
 
+    dx::DepthStateDescriptor particles_depth_descriptor = portals_write_stencil_depth_descriptor;
+    particles_depth_descriptor.DepthEnable = true;
+
     sky_depth = gpu.create_depth_state( &sky_depth_descriptor );
     raster_shadows_depth = gpu.create_depth_state( true );
     raster_chunks_depth = gpu.create_depth_state( &raster_chunks_depth_descriptor );
@@ -108,6 +114,7 @@ void Renderer::reload_depth_states()
     portals_write_stencil_depth = gpu.create_depth_state( &portals_write_stencil_depth_descriptor );
     portals_write_depth_depth = gpu.create_depth_state( &portals_write_depth_depth_descriptor );
     tracing_chunks_depth = gpu.create_depth_state( false );
+    particles_depth = gpu.create_depth_state( &particles_depth_descriptor );
 }
 
 void Renderer::reload_sampler_states()
@@ -155,6 +162,7 @@ void Renderer::reload_meshes()
         } );
     tracing_mesh = gpu.create_screen_mesh();
     portal_mesh = gpu.create_cube_mesh( { 1.0f } );
+    particles_mesh = {};
 }
 
 void Renderer::reload_textures()
@@ -176,6 +184,11 @@ void Renderer::reload_shaders()
         { "KL_Block", 0, DXGI_FORMAT_R8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
+    const std::vector<dx::LayoutDescriptor> particle_input_layout = {
+        { "KL_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "KL_Color", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
     sky_shaders = gpu.create_shaders( kl::read_file_string( "shaders/sky.hlsl" ) );
     raster_shadows_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_shadows.hlsl" ), chunk_input_layout );
     raster_chunks_shaders = gpu.create_shaders( kl::read_file_string( "shaders/raster_chunks.hlsl" ), chunk_input_layout );
@@ -183,6 +196,7 @@ void Renderer::reload_shaders()
     portals_write_stencil_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portals_write_stencil.hlsl" ) );
     portals_write_depth_shaders = gpu.create_shaders( kl::read_file_string( "shaders/portals_write_depth.hlsl" ) );
     tracing_chunks_shaders = gpu.create_shaders( kl::read_file_string( "shaders/tracing_chunks.hlsl" ) );
+    particles_shaders = gpu.create_shaders( kl::read_file_string( "shaders/particles.hlsl" ), particle_input_layout );
 
     if constexpr ( kl::IS_DEBUG )
         kl::print( "Shaders reloaded." );
@@ -215,7 +229,10 @@ void Renderer::render()
     {
     case RenderMode::RASTER: render_raster( player_camera ); break;
     case RenderMode::TRACING: render_tracing( player_camera ); break;
+    case RenderMode::PARTICLES: render_particles( player_camera ); break;
     }
+
+    handle_particles( player_camera );
 }
 
 void Renderer::render_raster( kl::Camera const& camera )
@@ -460,6 +477,55 @@ void Renderer::draw_tracing_chunks( kl::Camera const& camera )
 
     gpu.unbind_shader_view_for_pixel_shader( 1 );
     gpu.unbind_shader_view_for_pixel_shader( 0 );
+}
+
+void Renderer::render_particles( kl::Camera const& camera )
+{
+    auto& gpu = game.world.system.gpu;
+
+    gpu.bind_raster_state( particles_raster );
+    gpu.bind_depth_state( particles_depth );
+
+    gpu.context()->ClearDepthStencilView( gpu.back_depth_view().get(), D3D11_CLEAR_STENCIL, 0.0f, 254 );
+
+    struct CB
+    {
+        mat4 WVP;
+    };
+
+    CB cb = {};
+    cb.WVP = camera.matrix();
+    particles_shaders.upload( cb );
+
+    gpu.bind_shaders( particles_shaders );
+    gpu.draw( particles_mesh, D3D_PRIMITIVE_TOPOLOGY_POINTLIST, sizeof( flt3 ) );
+
+    render_raster( camera );
+}
+
+void Renderer::handle_particles( kl::Camera const& camera )
+{
+    if ( !game.world.system.window.keyboard.p.pressed() )
+        return;
+
+    if ( game.render_mode == RenderMode::PARTICLES )
+    {
+        game.render_mode = m_render_mode_before_particles;
+        return;
+    }
+
+    m_render_mode_before_particles = game.render_mode;
+    game.render_mode = RenderMode::PARTICLES;
+
+    std::vector<flt3> particles;
+    particles.resize( PARTICLE_GENERATE_COUNT );
+    std::for_each( std::execution::par, particles.begin(), particles.end(), [&]( flt3& p )
+        {
+            p = camera.position + kl::random::gen_float3( -PARTICLE_GENERATE_HALF_BOX_SIZE, PARTICLE_GENERATE_HALF_BOX_SIZE );
+        } );
+
+    auto& gpu = game.world.system.gpu;
+    particles_mesh = gpu.create_vertex_buffer( particles.data(), (UINT) particles.size() * sizeof( flt3 ) );
 }
 
 mat4 Renderer::get_inv_shadow_cam( kl::Camera camera ) const

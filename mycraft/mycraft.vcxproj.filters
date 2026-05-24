@@ -90,5 +90,6 @@
     <None Include="shaders\tracing_chunks.hlsl" />
     <None Include="shaders\portals_write_stencil.hlsl" />
     <None Include="shaders\portals_write_depth.hlsl" />
+    <None Include="shaders\particles.hlsl" />
   </ItemGroup>
 </Project>
