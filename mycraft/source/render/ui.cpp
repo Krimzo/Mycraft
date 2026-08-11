@@ -3,8 +3,7 @@
 
 UIMesh::UIMesh( kl::GPU& gpu )
     : gpu( gpu )
-{
-}
+{}
 
 void UIMesh::upload( UIPoint const* data, UINT count )
 {
@@ -53,7 +52,7 @@ UI::UI( Renderer& renderer )
 
     m_blend_state = gpu.create_blend_state( true );
 
-    std::vector<dx::LayoutDescriptor> ui_input_layout = {
+    const std::initializer_list<dx::LayoutDescriptor> ui_input_layout = {
         { "KL_Position", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "KL_UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
