@@ -9,10 +9,10 @@ struct VS_OUT
 
 static const float PI = radians(180);
 static const float2 DEFINED_TEXTURES[4] = {
-    { 0.0f, 1.0f },
-    { 0.0f, 0.0f },
-    { 1.0f, 0.0f },
-    { 1.0f, 1.0f },
+    {0.0f, 1.0f},
+    {0.0f, 0.0f},
+    {1.0f, 0.0f},
+    {1.0f, 1.0f},
 };
 static const float AMBIENT_FACTOR = 0.2f;
 
@@ -46,17 +46,15 @@ float2 atlas_uv(uint block, uint textur)
 float get_pcf_shadow(float3 sun_ndc_coords, int half_kernel_size)
 {
     const float3 light_uvw_coords =
-    {
-        sun_ndc_coords.x * 0.5f + 0.5f,
-        sun_ndc_coords.y * -0.5f + 0.5f,
-        sun_ndc_coords.z,
-    };
+        {
+            sun_ndc_coords.x * 0.5f + 0.5f,
+            sun_ndc_coords.y * -0.5f + 0.5f,
+            sun_ndc_coords.z,
+        };
     float shadow_factor = 0.0f;
-    [unroll]
-    for (int y = -half_kernel_size; y <= half_kernel_size; y++)
+    [unroll] for (int y = -half_kernel_size; y <= half_kernel_size; y++)
     {
-        [unroll]
-        for (int x = -half_kernel_size; x <= half_kernel_size; x++)
+        [unroll] for (int x = -half_kernel_size; x <= half_kernel_size; x++)
         {
             float2 altered_coords = light_uvw_coords.xy + SHADOW_TEXEL_SIZE * float2(x, y);
             float shadow_depth = SHADOW_TEXTURE.Sample(SHADOW_SAMPLER, altered_coords).r;
@@ -86,22 +84,22 @@ float4 p_shader(VS_OUT data) : SV_Target0
         if (plane_world_dot < 0.0f)
             discard;
     }
-    
+
     float4 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, data.uv);
     if (color.a < 1.0f)
         discard;
-    
+
     float3 a = data.world;
     float3 b = a + ddx(a);
     float3 c = a + ddy(a);
     float3 normal = normalize(cross(b - a, c - a));
-    
+
     data.sun.z = min(data.sun.z, 1.0f);
-    
+
     float diffuse = saturate(dot(-SUN_DIRECTION, normal));
     float shadow = get_pcf_shadow(data.sun.xyz, 1);
     float light = max(diffuse * (1.0f - shadow), data.ambient);
-    
+
     color.xyz *= light;
     return color;
 }

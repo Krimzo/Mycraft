@@ -6,11 +6,11 @@ struct VS_OUT
 
 static const float PI = 3.1415926535897932384626433832795f;
 static const float2 DEFINED_TEXTURES[4] =
-{
-	{ 0.0f, 1.0f },
-	{ 0.0f, 0.0f },
-	{ 1.0f, 0.0f },
-	{ 1.0f, 1.0f },
+    {
+        {0.0f, 1.0f},
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
 };
 
 float4x4 VP;

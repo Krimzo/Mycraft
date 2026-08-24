@@ -10,25 +10,24 @@ struct AABB
 {
     float3 position;
     float3 size;
-    
+
     float3 min_point()
     {
-		return position - size;
+        return position - size;
     }
 
     float3 max_point()
     {
-		return position + size;
+        return position + size;
     }
-    
+
     bool contains(float3 pnt)
     {
         float3 minp = min_point();
-		float3 maxp = max_point();
-        return
-            (pnt.x >= minp.x && pnt.x <= maxp.x) &&
-            (pnt.y >= minp.y && pnt.y <= maxp.y) &&
-            (pnt.z >= minp.z && pnt.z <= maxp.z);
+        float3 maxp = max_point();
+        return (pnt.x >= minp.x && pnt.x <= maxp.x) &&
+               (pnt.y >= minp.y && pnt.y <= maxp.y) &&
+               (pnt.z >= minp.z && pnt.z <= maxp.z);
     }
 };
 
@@ -36,7 +35,7 @@ struct Ray
 {
     float3 origin;
     float3 direction;
-    
+
     bool intersect_aabb(AABB aabb, inout float3 out_inter)
     {
         if (aabb.contains(origin))
@@ -107,13 +106,12 @@ uint get_block(float3 pos)
 {
     static const int chunk_blocks = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
     const int width_chunks = RENDER_DISTANCE * 2 + 1;
-    
+
     int3 first_chunk = to_chunk_pos(CAMERA_POSITION - RENDER_DISTANCE * CHUNK_SIZE);
-    int3 chunk_ind = to_chunk_pos(pos - first_chunk) / CHUNK_SIZE;    
-    int3 block_ind = floor(pos - to_chunk_pos(pos));    
-    
-    int ind = (chunk_ind.x + chunk_ind.z * width_chunks) * chunk_blocks
-        + (block_ind.x + (block_ind.z * CHUNK_WIDTH) + (block_ind.y * CHUNK_WIDTH * CHUNK_WIDTH));
+    int3 chunk_ind = to_chunk_pos(pos - first_chunk) / CHUNK_SIZE;
+    int3 block_ind = floor(pos - to_chunk_pos(pos));
+
+    int ind = (chunk_ind.x + chunk_ind.z * width_chunks) * chunk_blocks + (block_ind.x + (block_ind.z * CHUNK_WIDTH) + (block_ind.y * CHUNK_WIDTH * CHUNK_WIDTH));
     return BLOCKS_TEXTURE[ind];
 }
 
@@ -122,11 +120,11 @@ bool trace(Ray ray, inout float3 out_pos, inout uint out_type)
     float3 block = floor(ray.origin);
     float3 t_delta = 1 / abs(ray.direction);
     float3 t_max =
-    {
-        (block.x + (ray.direction.x > 0 ? 1 : 0) - ray.origin.x) / ray.direction.x,
-        (block.y + (ray.direction.y > 0 ? 1 : 0) - ray.origin.y) / ray.direction.y,
-        (block.z + (ray.direction.z > 0 ? 1 : 0) - ray.origin.z) / ray.direction.z,
-    };
+        {
+            (block.x + (ray.direction.x > 0 ? 1 : 0) - ray.origin.x) / ray.direction.x,
+            (block.y + (ray.direction.y > 0 ? 1 : 0) - ray.origin.y) / ray.direction.y,
+            (block.z + (ray.direction.z > 0 ? 1 : 0) - ray.origin.z) / ray.direction.z,
+        };
     while (in_world_bounds(block + 0.5f))
     {
         uint block_type = get_block(block);
@@ -136,7 +134,7 @@ bool trace(Ray ray, inout float3 out_pos, inout uint out_type)
             out_type = block_type;
             return true;
         }
-        
+
         if (t_max.x < t_max.y)
         {
             if (t_max.x < t_max.z)
@@ -180,15 +178,15 @@ float3 closest_axis_vec(float3 dir)
 float3 get_color(Ray ray, float3 block_pos, uint block_type)
 {
     static const float ambient = 0.1f;
-    
+
     AABB aabb;
     aabb.position = block_pos + 0.5f;
     aabb.size = 0.5f;
-    
+
     float3 inter = 0.0f;
-    if (!ray.intersect_aabb(aabb, inter)) 
+    if (!ray.intersect_aabb(aabb, inter))
         return 0.0f;
-    
+
 #if 0
     float3 normal = normalize(inter - aabb.position);
     normal = normalize(round(normal));
@@ -198,11 +196,11 @@ float3 get_color(Ray ray, float3 block_pos, uint block_type)
     float3 c = a + ddy(a);
     float3 normal = normalize(cross(b - a, c - a));
 #endif
-    
+
     Ray shadow_ray;
     shadow_ray.origin = inter + normal * 0.001f;
     shadow_ray.direction = -SUN_DIRECTION;
-    
+
     float3 light = 0.0f;
     float3 _ign1 = 0.0f;
     uint _ign2 = 0;
@@ -215,10 +213,10 @@ float3 get_color(Ray ray, float3 block_pos, uint block_type)
         float diffuse = saturate(dot(-SUN_DIRECTION, normal));
         light = max(diffuse, ambient);
     }
-    
+
     float u = ((block_type >> 4) & 0xF) / 16.0f;
     float v = ((block_type >> 0) & 0xF) / 16.0f;
-    
+
     float3 color = ATLAS_TEXTURE.Sample(ATLAS_SAMPLER, float2(u, v)).rgb;
     return color * light;
 }
@@ -235,16 +233,16 @@ float4 p_shader(VS_OUT data) : SV_Target0
 {
     float4 pixel_world = mul(float4(data.ndc, 1.0f, 1.0f), INV_CAM);
     pixel_world /= pixel_world.w;
-    
+
     Ray ray;
     ray.origin = CAMERA_POSITION;
     ray.direction = normalize(pixel_world.xyz - ray.origin);
-    
+
     float3 block_pos = 0.0f;
     uint block_type = 0;
     if (!trace(ray, block_pos, block_type))
         discard;
-    
+
     float3 color = get_color(ray, block_pos, block_type);
     return float4(color, 1.0f);
 }
